@@ -1,16 +1,34 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
-    import { UploadedDoc } from '../../../core/models/onboarding.models';
+import { Component, EventEmitter, Input, Output, inject, signal } from '@angular/core';
+import { UploadedDoc } from '../../../core/models/onboarding.models';
+import { DocumentService } from '../../../core/services/document.service';
 
 @Component({
   selector: 'app-file-dropzone',
   standalone: true,
   template: `
-    <label class="drop" [class.has-file]="value">
-      <input type="file" [accept]="accept" (change)="onFile($event)" />
-      @if (value) {
+    <label class="drop" [class.has-file]="value" [class.busy]="uploading()">
+      <input type="file" [accept]="accept" [disabled]="uploading()" (change)="onFile($event)" />
+      @if (uploading()) {
+        <span class="title">Uploading…</span>
+        <span class="hint">{{ pendingName() }}</span>
+      } @else if (value) {
         <span class="name">{{ value.fileName }}</span>
         <span class="meta">{{ sizeLabel(value.fileSize) }} · {{ value.mimeType }}</span>
-        <button type="button" class="link" (click)="clear($event)">Remove</button>
+        @switch (value.reviewStatus) {
+          @case ('verified') {
+            <span class="badge ok">Verified</span>
+          }
+          @case ('rejected') {
+            <span class="badge bad">Rejected — replace this file</span>
+          }
+          @case ('action_required') {
+            <span class="badge bad">{{ value.rejectionReason || 'Replacement requested' }}</span>
+          }
+          @default {
+            <span class="badge">Uploaded · under review</span>
+          }
+        }
+        <button type="button" class="link" (click)="clear($event)">Replace</button>
       } @else {
         <span class="title">{{ label }}</span>
         <span class="hint">{{ hint }} · PDF, JPG or PNG up to 2 MB</span>
@@ -60,6 +78,27 @@ import { Component, EventEmitter, Input, Output } from '@angular/core';
         z-index: 1;
         position: relative;
       }
+      .drop.busy {
+        opacity: 0.75;
+        cursor: progress;
+      }
+      .badge {
+        width: fit-content;
+        font-size: 11px;
+        font-weight: 700;
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: #ece7f8;
+        color: #4b4266;
+      }
+      .badge.ok {
+        background: #e3f6ea;
+        color: #1c7a45;
+      }
+      .badge.bad {
+        background: #fdeaea;
+        color: #a52020;
+      }
     `,
   ],
 })
@@ -72,6 +111,10 @@ export class FileDropzoneComponent {
   @Output() valueChange = new EventEmitter<UploadedDoc | undefined>();
   @Output() error = new EventEmitter<string>();
 
+  private readonly documents = inject(DocumentService);
+  readonly uploading = signal(false);
+  readonly pendingName = signal('');
+
   onFile(event: Event): void {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
@@ -79,27 +122,25 @@ export class FileDropzoneComponent {
     if (!file) {
       return;
     }
-    if (file.size > 2 * 1024 * 1024) {
-      this.error.emit('Each file must be 2 MB or smaller.');
+    const invalid = this.documents.validate(file);
+    if (invalid) {
+      this.error.emit(invalid);
       return;
     }
-    this.valueChange.emit({
-      slotId: this.slotId,
-      fileName: file.name,
-      fileSize: file.size,
-      mimeType: file.type || 'application/octet-stream',
+    this.uploading.set(true);
+    this.pendingName.set(file.name);
+    this.documents.upload(this.slotId, file).subscribe({
+      next: (doc) => {
+        this.uploading.set(false);
+        this.pendingName.set('');
+        this.valueChange.emit(doc);
+      },
+      error: (err: Error) => {
+        this.uploading.set(false);
+        this.pendingName.set('');
+        this.error.emit(err.message || 'Upload failed. Try again.');
+      },
     });
-    const reader = new FileReader();
-    reader.onload = () => {
-      this.valueChange.emit({
-        slotId: this.slotId,
-        fileName: file.name,
-        fileSize: file.size,
-        mimeType: file.type || 'application/octet-stream',
-        dataUrl: typeof reader.result === 'string' ? reader.result : undefined,
-      });
-    };
-    reader.readAsDataURL(file);
   }
 
   clear(event: Event): void {

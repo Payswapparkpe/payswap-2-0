@@ -79,9 +79,10 @@ export class WizardStepperComponent {
   @Input() current: OnboardingStep = 'signatory';
   @Input() entityType: EntityType | '' = '';
   @Input() signatoryIsOwner: boolean | null = null;
+  @Input() kycPersonIsAuthorisedSignatory: boolean | null = null;
 
   get steps() {
-    return stepsForEntity(this.entityType, this.signatoryIsOwner);
+    return stepsForEntity(this.entityType, this.signatoryIsOwner, this.kycPersonIsAuthorisedSignatory);
   }
 
   get activeIndex(): number {

@@ -1,7 +1,8 @@
-import { Component, inject } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { OnboardingService } from '../../core/services/onboarding.service';
+import { isApplicationEditable } from '../../core/models/onboarding.models';
 
 @Component({
   selector: 'app-bank-profile',
@@ -12,7 +13,9 @@ import { OnboardingService } from '../../core/services/onboarding.service';
       <article class="card">
         <header>
           <h3>Settlement account</h3>
-          <a mat-stroked-button routerLink="/app/onboarding">Update in wizard</a>
+          @if (editable()) {
+            <a mat-stroked-button routerLink="/app/onboarding">Update in wizard</a>
+          }
         </header>
         <p class="warn">Bank account name, PAN name, and GST legal name must match exactly.</p>
         <dl>
@@ -66,4 +69,5 @@ import { OnboardingService } from '../../core/services/onboarding.service';
 })
 export class BankProfileComponent {
   readonly onboarding = inject(OnboardingService);
+  readonly editable = computed(() => isApplicationEditable(this.onboarding.application()));
 }

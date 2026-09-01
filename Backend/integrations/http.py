@@ -1,9 +1,20 @@
 import json as jsonlib
+import ssl
 import urllib.error
 import urllib.parse
 import urllib.request
 import uuid
 from time import monotonic
+
+
+def _ssl_context() -> ssl.SSLContext:
+    """Use certifi CAs when available (fixes macOS Python.org SSL verify failures)."""
+    try:
+        import certifi
+
+        return ssl.create_default_context(cafile=certifi.where())
+    except ImportError:
+        return ssl.create_default_context()
 
 
 def _encode_multipart(fields: dict, files: dict) -> tuple[bytes, str]:
@@ -24,6 +35,9 @@ def _encode_multipart(fields: dict, files: dict) -> tuple[bytes, str]:
 
 
 class UrllibHttp:
+    def __init__(self):
+        self._ssl = _ssl_context()
+
     def json_request(self, method, url, *, headers=None, json=None, files=None, timeout=20):
         started = monotonic()
         payload = None
@@ -38,7 +52,7 @@ class UrllibHttp:
         try:
             # Audited outbound integration transport; URLs come from trusted client
             # config — scheme restriction belongs in a wrapper, not the transport.
-            with urllib.request.urlopen(request, timeout=timeout) as response:  # nosec B310
+            with urllib.request.urlopen(request, timeout=timeout, context=self._ssl) as response:  # nosec B310
                 raw = response.read().decode()
                 data = jsonlib.loads(raw) if raw else {}
                 self._record(method, url, response.status, started)
@@ -66,7 +80,7 @@ class UrllibHttp:
         request = urllib.request.Request(url, headers={"Accept": "application/octet-stream"})
         # Signed-document URLs are provider-issued pre-signed HTTPS URLs.
         try:
-            with urllib.request.urlopen(request, timeout=timeout) as response:  # nosec B310
+            with urllib.request.urlopen(request, timeout=timeout, context=self._ssl) as response:  # nosec B310
                 payload = response.read()
                 self._record("GET", url, response.status, started)
                 return payload

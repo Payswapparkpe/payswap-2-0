@@ -1,5 +1,6 @@
 import hashlib
 import logging
+import urllib.error
 import uuid
 
 from django.conf import settings
@@ -156,3 +157,12 @@ class SmsService:
             if fail_silently:
                 return None
             raise
+        except (urllib.error.URLError, OSError, TimeoutError) as exc:
+            logger.exception("SMS transport error for %s template %s", to, template)
+            if log is not None:
+                log.status = DeliveryStatus.FAILED
+                log.last_error = str(exc)[:2000]
+                log.save(update_fields=["status", "last_error", "updated_at"])
+            if fail_silently:
+                return None
+            raise KaleyraError("Could not reach the SMS provider.") from exc

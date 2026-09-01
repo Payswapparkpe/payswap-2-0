@@ -32,6 +32,23 @@ class TestEmailContent:
         assert "{{" not in text
         assert subject
 
+    def test_verification_code_uses_support_sender(self, merchant_user):
+        with override_settings(
+            OTP_FROM_EMAIL="Payswap <support@payswap.in>",
+            OTP_REPLY_TO_EMAIL="support@payswap.in",
+        ):
+            EmailService.send(
+                to=merchant_user.email,
+                template="verification_code",
+                context={"user": merchant_user, "code": "654321"},
+                sensitive=True,
+            )
+        msg = mail.outbox[-1]
+        assert "support@payswap.in" in msg.from_email
+        assert msg.reply_to == ["support@payswap.in"]
+        assert "654321" in msg.body
+        assert "Powered by PAYSWAP" in msg.body
+
     def test_order_rejection_reason_in_email_not_inbox(self, merchant_user):
         NotificationService.notify(
             user=merchant_user,

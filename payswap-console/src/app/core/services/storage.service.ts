@@ -61,6 +61,12 @@ export class StorageService {
       if (!app.ownerKyc) {
         app.ownerKyc = emptyPersonKyc();
       }
+      if (!app.authSignatoryKyc) {
+        app.authSignatoryKyc = emptyPersonKyc();
+      }
+      if (!app.registryMembers) {
+        app.registryMembers = [];
+      }
       if (app.kycPersonIsAuthorisedSignatory === undefined) {
         app.kycPersonIsAuthorisedSignatory = null;
       }

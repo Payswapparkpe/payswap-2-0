@@ -21,11 +21,12 @@ export type AccountStatus =
   | 'pending_admin_sign'
   | 'activated';
 
-export type SignatoryKycPath = 'digilocker';
+export type SignatoryKycPath = 'digilocker' | 'self_attested';
 
 export type OnboardingStep =
   | 'signatory'
   | 'profile'
+  | 'auth_signatory'
   | 'owner'
   | 'identity'
   | 'ubo'
@@ -46,6 +47,8 @@ export type PennyDropStatus = 'idle' | 'sent' | 'matched' | 'mismatch';
 
 export interface User {
   id: string;
+  /** Payswap account ID, e.g. PSU-000005 */
+  publicId?: string;
   fullName: string;
   email: string;
   mobile: string;
@@ -86,15 +89,38 @@ export interface DigilockerSnapshot {
   referenceId: number;
   status: string;
   documents: Array<{ type: string; name: string; idMasked: string }>;
+  userDetails?: {
+    name: string;
+    dob: string;
+    mobile: string;
+    gender: string;
+  };
 }
+
+/** Progress of the POST to /merchant/onboarding/documents/ for this slot. */
+export type DocUploadStatus = 'pending' | 'uploading' | 'uploaded' | 'failed';
+
+/** Reviewer verdict on the stored file, mirrored from Document.status. */
+export type DocReviewStatus =
+  | 'uploaded'
+  | 'under_review'
+  | 'verified'
+  | 'action_required'
+  | 'rejected';
 
 export interface UploadedDoc {
   slotId: string;
   fileName: string;
   fileSize: number;
   mimeType: string;
-  /** Present for files uploaded in this browser session; demo seeds may omit it. */
-  dataUrl?: string;
+  /** Server document id; absent only while the upload is still in flight. */
+  publicId?: string;
+  docType?: string;
+  uploadStatus?: DocUploadStatus;
+  reviewStatus?: DocReviewStatus;
+  rejectionReason?: string;
+  /** OCR extracted fields when self-attested or deed upload is processed. */
+  ocrPayload?: Record<string, unknown>;
 }
 
 export interface BankDetails {
@@ -134,6 +160,24 @@ export interface BusinessProfile {
   gstinOptions?: GstinOption[];
 }
 
+export interface RegistryDirector {
+  name: string;
+  din: string;
+  designation: string;
+  dob: string;
+  address: string;
+  pan: string;
+  mobile?: string;
+  digiConsent?: boolean;
+  kycVerified?: boolean;
+  kycPath?: SignatoryKycPath;
+  /** Set when director KYC was satisfied from signatory or owner step (no second DigiLocker). */
+  kycLinkedFrom?: 'signatory' | 'owner' | 'auth_signatory';
+  digilocker?: DigilockerSnapshot | null;
+  /** Self-attested Aadhaar/PAN uploads when eKYC is not used. */
+  selfAttestedDocs?: UploadedDoc[];
+}
+
 export interface BusinessIdentity {
   pan: string;
   doi: string;
@@ -146,6 +190,29 @@ export interface BusinessIdentity {
   gstinCheck?: RegistryCheck | null;
   cinCheck?: RegistryCheck | null;
   gstinOptions?: GstinOption[];
+  /** Udyam registration for individual merchants. */
+  udyamNumber?: string;
+  udyamCheck?: RegistryCheck | null;
+  udyamDetails?: UdyamDetails | null;
+}
+
+export interface UdyamDetails {
+  enterpriseName: string;
+  ownerName: string;
+  organizationType?: string;
+  enterpriseType?: string;
+  majorActivity?: string;
+  dateOfUdyamRegistration?: string;
+  dateOfIncorporation?: string;
+  dateOfCommencement?: string;
+  address?: Address;
+  nicCodes?: Array<{
+    serialNumber: string;
+    nic2Digit: string;
+    nic4Digit: string;
+    nic5Digit: string;
+    activity: string;
+  }>;
 }
 
 export interface Compliance {
@@ -257,6 +324,8 @@ export interface Lead {
 
 export interface KycApplication {
   userId: string;
+  /** Merchant file ID, e.g. PSM-000003 */
+  merchantId?: string;
   status: AccountStatus;
   currentStep: OnboardingStep;
   profile: BusinessProfile;
@@ -272,9 +341,18 @@ export interface KycApplication {
   signatoryIsOwner: boolean | null;
   /** Person KYC of a business owner / director when the signatory is not an owner. */
   ownerKyc: SignatoryKyc;
+  /** Person KYC of the authorised signatory when the account opener is someone else. */
+  authSignatoryKyc: SignatoryKyc;
+  registryDirectors?: RegistryDirector[];
+  /** Partners/trustees for non-CIN entities (manual + optional deed OCR). */
+  registryMembers?: RegistryDirector[];
+  /** Optional partnership/trust deed uploaded for OCR pre-fill. */
+  registryDeedDoc?: UploadedDoc;
   ubos: Ubo[];
   /** Last admin send-back note, if any. */
   returnReason?: string;
+  /** Wizard steps admin marked NEEDS_CORRECTION — unlock verify actions there. */
+  correctionSteps?: OnboardingStep[];
   ubosFrozen: boolean;
   publicListedSkip: boolean;
   bank: BankDetails;
@@ -304,6 +382,7 @@ export interface AppDatabase {
 export const ONBOARDING_STEPS: { id: OnboardingStep; label: string }[] = [
   { id: 'signatory', label: 'KYC' },
   { id: 'profile', label: 'Business' },
+  { id: 'auth_signatory', label: 'Auth signatory KYC' },
   { id: 'owner', label: 'Owner KYC' },
   { id: 'identity', label: 'KYB' },
   { id: 'ubo', label: 'Owners' },
@@ -378,6 +457,8 @@ export function emptyApplication(userId: string): KycApplication {
     authorisedSignatoryName: '',
     signatoryIsOwner: null,
     ownerKyc: emptyPersonKyc(),
+    authSignatoryKyc: emptyPersonKyc(),
+    registryMembers: [],
     ubos: [],
     ubosFrozen: false,
     publicListedSkip: false,
@@ -421,6 +502,38 @@ export function isLive(app: KycApplication | null | undefined): boolean {
     !!app.agreement?.eSigned &&
     !!app.agreement?.adminSigned
   );
+}
+
+/** Commerce and catalog unlock only after admin countersigns the agreement. */
+export function canAccessCommerce(app: KycApplication | null | undefined): boolean {
+  return isLive(app);
+}
+
+/** Editable only in draft/registered — locked after submit until admin returns for correction. */
+export function isApplicationEditable(app: KycApplication | null | undefined): boolean {
+  return app?.status === 'draft' || app?.status === 'registered';
+}
+
+/** After submit: keep wizard visible but inputs read-only (not the full-screen lock). */
+export function isOnboardingReadOnly(app: KycApplication | null | undefined): boolean {
+  return (
+    app?.status === 'under_review' ||
+    app?.status === 'pending_agreement' ||
+    app?.status === 'pending_admin_sign'
+  );
+}
+
+/** Full-screen lock only once activation is complete or agreement is the only path left. */
+export function isOnboardingScreenLocked(app: KycApplication | null | undefined): boolean {
+  return app?.status === 'activated';
+}
+
+export function isApplicationLocked(app: KycApplication | null | undefined): boolean {
+  return !!app && !isApplicationEditable(app);
+}
+
+export function activationInProgress(app: KycApplication | null | undefined): boolean {
+  return !!app && !canAccessCommerce(app);
 }
 
 export function kycDone(app: KycApplication | null | undefined): boolean {

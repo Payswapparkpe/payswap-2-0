@@ -6,7 +6,7 @@ from django.utils.decorators import method_decorator
 from django_ratelimit.decorators import ratelimit
 
 from access.seeds import seed_access_control
-from accounts.models import LoginEvent, User
+from accounts.models import LoginEvent, User, VerificationChallenge
 from accounts.registration import RegistrationDraft
 from accounts.services import LockoutService, PasswordResetService, SessionService, VerificationService
 from audit.services import AuditService
@@ -26,6 +26,41 @@ def _client_ip(request):
 
 def _otp_digits(value: str) -> str:
     return "".join(ch for ch in (value or "") if ch.isdigit())[:6]
+
+
+def _otp_purpose(value: str) -> str:
+    mapping = {
+        "verification": VerificationChallenge.Purpose.VERIFICATION,
+        "security_action": VerificationChallenge.Purpose.SECURITY_ACTION,
+        "authentication": VerificationChallenge.Purpose.AUTHENTICATION,
+    }
+    key = (value or "verification").strip().lower()
+    if key not in mapping:
+        raise ValueError("Unsupported OTP purpose.")
+    return mapping[key]
+
+
+def _otp_meta() -> dict:
+    return {
+        "smsProvider": "kaleyra",
+        "smsSender": getattr(settings, "KALEYRA_SENDER", "PYSWAP"),
+    }
+
+
+class AuthConfigView(JsonView):
+    def get(self, request):
+        test_mode = bool(getattr(settings, "AUTH_TEST_MODE", False))
+        payload = {
+            "smsProvider": "kaleyra",
+            "smsSender": getattr(settings, "KALEYRA_SENDER", "PYSWAP"),
+            "smsApiDomain": getattr(settings, "KALEYRA_BASE_URL", "https://api.in.kaleyra.io"),
+            "testMode": test_mode,
+            "otpCooldownSeconds": getattr(settings, "OTP_RESEND_COOLDOWN_SECONDS", 30),
+            "otpExpirySeconds": getattr(settings, "OTP_EXPIRY_SECONDS", 300),
+        }
+        if test_mode:
+            payload["testOtp"] = getattr(settings, "TEST_OTP", "123456")
+        return self.ok(payload)
 
 
 class AuthRegisterView(JsonView):
@@ -74,6 +109,7 @@ class AuthRegisterView(JsonView):
                 "mobileVerified": bool(draft.data.get("mobile_verified")),
                 "otpWaitEmail": draft.otp_wait_seconds("email"),
                 "otpWaitMobile": draft.otp_wait_seconds("mobile"),
+                **_otp_meta(),
             }
             if settings.DEBUG:
                 if email_code:
@@ -88,7 +124,7 @@ class AuthRegisterView(JsonView):
                 return api_error("channel must be email or mobile.")
             code = draft.issue_otp(channel)
             draft.save(request)
-            payload = {"step": draft.step, "otpWait": draft.otp_wait_seconds(channel)}
+            payload = {"step": draft.step, "otpWait": draft.otp_wait_seconds(channel), **_otp_meta()}
             if settings.DEBUG:
                 payload["debugOtp"] = code
             return self.ok(payload)
@@ -262,8 +298,30 @@ class AuthPasswordResetView(JsonView):
         action = body.get("action") or "request"
         if action == "request":
             email = (body.get("identifier") or body.get("email") or "").strip()
-            PasswordResetService.request_reset(email=email, request=request)
+            PasswordResetService.request_reset(email=email, request=request, console=True)
             return self.ok({"sent": True})
+        if action == "validate":
+            uid = body.get("uid") or body.get("uidb64") or ""
+            token = body.get("token") or ""
+            if not uid or not token or PasswordResetService.resolve(uid, token) is None:
+                return api_error("This password reset link is invalid or has expired.", status=400)
+            return self.ok({"valid": True})
+        if action == "confirm":
+            uid = body.get("uid") or body.get("uidb64") or ""
+            token = body.get("token") or ""
+            password = body.get("password") or body.get("newPassword") or ""
+            confirm = body.get("confirmPassword") or body.get("confirm_password") or password
+            if not uid or not token:
+                return api_error("This password reset link is invalid or has expired.", status=400)
+            if not password:
+                return api_error("Enter a new password.", status=400)
+            if password != confirm:
+                return api_error("The passwords do not match.", status=400)
+            try:
+                PasswordResetService.confirm(uidb64=uid, token=token, new_password=password, request=request)
+            except ValidationError as exc:
+                return api_error(" ".join(exc.messages), status=400)
+            return self.ok({"reset": True})
         return api_error("Password reset via OTP is not supported. Check your email for a reset link.")
 
 
@@ -286,13 +344,17 @@ class AuthVerifyView(JsonView):
         channel = body.get("channel")
         if channel not in {"email", "mobile"}:
             return api_error("channel must be email or mobile.")
+        try:
+            purpose = _otp_purpose(body.get("purpose") or "verification")
+        except ValueError:
+            return api_error("Unsupported OTP purpose.")
 
         if action == "send_otp":
             try:
-                issued = VerificationService.issue(user, channel=channel)
+                issued = VerificationService.issue(user, channel=channel, purpose=purpose)
             except ValidationError as exc:
                 return api_error(" ".join(exc.messages))
-            payload = {"sent": True}
+            payload = {"sent": True, "channel": channel, "purpose": purpose, **_otp_meta()}
             if settings.DEBUG:
                 payload["debugOtp"] = issued.debug_code
             return self.ok(payload)
@@ -301,9 +363,12 @@ class AuthVerifyView(JsonView):
             code = _otp_digits(body.get("code") or "")
             if len(code) != 6:
                 return api_error("Enter a valid 6-digit code.")
-            if not VerificationService.confirm(user, channel=channel, code=code):
+            if not VerificationService.confirm(user, channel=channel, code=code, purpose=purpose):
                 return api_error("The OTP is incorrect or has expired.")
             user.refresh_from_db()
-            return self.ok({"user": user_payload(user)})
+            payload = {"user": user_payload(user)}
+            if purpose != VerificationChallenge.Purpose.VERIFICATION:
+                payload["verified"] = True
+            return self.ok(payload)
 
         return api_error("Unknown verification action.")

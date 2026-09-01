@@ -123,7 +123,7 @@ class MerchantOnboardingService:
             )
 
     @staticmethod
-    def save_step(application, *, key, actor, data: dict) -> OnboardingStep:
+    def save_step(application, *, key, actor, data: dict, source_step: str = "") -> OnboardingStep:
         if application.merchant.owner_id != actor.id:
             raise PermissionDenied("You can only update your own application.")
         if application.status not in {
@@ -134,7 +134,17 @@ class MerchantOnboardingService:
         step = application.steps.get(key=key)
         data = merge_step_data(decrypt_step_data(step.data), dict(data))
         if key == "business":
-            MerchantOnboardingService._validate_business(application.merchant.entity_type, data)
+            from api.serializers import _entity_type_from_angular
+
+            angular_entity = (data.get("entity_type") or "").strip()
+            if angular_entity:
+                application.merchant.entity_type = _entity_type_from_angular(angular_entity)
+                application.merchant.save(update_fields=["entity_type"])
+            MerchantOnboardingService._validate_business(
+                application.merchant.entity_type,
+                data,
+                require_identity=source_step not in {"profile", "signatory", "ubo"},
+            )
             application.merchant.business_name = data.get("legal_name", application.merchant.business_name)
             application.merchant.save(update_fields=["business_name"])
         if key == "owners":
@@ -156,19 +166,84 @@ class MerchantOnboardingService:
                 data["account_number"] = f"****{account_number[-4:]}"
                 data["account_last4"] = account_number[-4:]
         step.data = encrypt_step_data(data)
-        step.status = StepStatus.COMPLETE
+        if key == "business":
+            step.status = MerchantOnboardingService._business_step_status(
+                application.merchant.entity_type,
+                source_step=source_step,
+                data=data,
+            )
+            if source_step == "ubo":
+                # UBO list updates must not mark KYB complete early.
+                existing = application.steps.get(key="business")
+                if existing.status == StepStatus.IN_PROGRESS:
+                    step.status = StepStatus.IN_PROGRESS
+        else:
+            step.status = StepStatus.COMPLETE
         step.clarification_message = ""
         step.save(update_fields=["data", "status", "clarification_message", "updated_at"])
         if key == "business":
             MerchantOnboardingService._mirror_identity_steps(application, data)
+            MerchantOnboardingService._mirror_owners_step(application, data)
         return step
 
     @staticmethod
-    def _validate_business(entity_type, data):
-        required = ENTITY_BUSINESS_FIELDS.get(entity_type, ["legal_name"])
+    def _mirror_owners_step(application, business_data):
+        """Copy signatory / owner fields into the owners step for solo-entity flows."""
+        owner_name = (business_data.get("owner_name") or business_data.get("legal_name") or "").strip()
+        if not owner_name:
+            return
+        owners = application.steps.filter(key="owners").first()
+        if owners is None:
+            return
+        owner_data = merge_step_data(
+            decrypt_step_data(owners.data),
+            {
+                "owner_name": owner_name,
+                "owner_dob": business_data.get("owner_dob") or "",
+                "authorized_signatory": business_data.get("authorized_signatory") or owner_name,
+                "designation": business_data.get("designation") or "",
+            },
+        )
+        owners.data = encrypt_step_data(owner_data)
+        owners.status = StepStatus.COMPLETE
+        owners.clarification_message = ""
+        owners.save(update_fields=["data", "status", "clarification_message", "updated_at"])
+        MerchantOnboardingService._sync_beneficial_owners(application.merchant, owner_data)
+
+    @staticmethod
+    def _business_step_status(entity_type: str, *, source_step: str, data: dict | None = None) -> str:
+        data = data or {}
+        if source_step == "profile":
+            if entity_type == Merchant.EntityType.INDIVIDUAL:
+                has_name = bool((data.get("legal_name") or data.get("brand_name") or "").strip())
+                if has_name and data.get("udyam_verified"):
+                    return StepStatus.COMPLETE
+                return StepStatus.IN_PROGRESS
+            return StepStatus.IN_PROGRESS
+        if source_step == "signatory":
+            return (
+                StepStatus.COMPLETE
+                if entity_type == Merchant.EntityType.INDIVIDUAL
+                else StepStatus.IN_PROGRESS
+            )
+        if source_step == "identity":
+            return StepStatus.COMPLETE
+        return StepStatus.COMPLETE
+
+    @staticmethod
+    def _validate_business(entity_type, data, *, require_identity=True):
+        required = list(ENTITY_BUSINESS_FIELDS.get(entity_type, ["legal_name"]))
+        if entity_type == Merchant.EntityType.INDIVIDUAL:
+            required = [*required, "udyam_number"]
+        if not require_identity:
+            required = [field for field in required if field not in {"pan", "gstin", "cin", "llpin", "udyam_number"}]
+        if data.get("no_gstin"):
+            required = [field for field in required if field != "gstin"]
         missing = [field for field in required if not (data.get(field) or "").strip()]
         if missing:
             raise ValidationError("Complete the required business details.")
+        if entity_type == Merchant.EntityType.INDIVIDUAL and require_identity and not data.get("udyam_verified"):
+            raise ValidationError("Verify your Udyam registration before continuing.")
         pan = (data.get("pan") or "").upper()
         if pan and not PAN_RE.match(pan):
             raise ValidationError("Enter a valid PAN.")
@@ -283,6 +358,13 @@ class MerchantOnboardingService:
         business = application.steps.filter(key="business").first()
         if business and business.status == StepStatus.COMPLETE:
             MerchantOnboardingService._mirror_identity_steps(application, decrypt_step_data(business.data))
+        elif business:
+            business_data = decrypt_step_data(business.data)
+            MerchantOnboardingService._validate_business(
+                application.merchant.entity_type,
+                business_data,
+                require_identity=True,
+            )
         incomplete = application.steps.filter(key__in=REQUIRED_BEFORE_SUBMIT).exclude(
             status=StepStatus.COMPLETE
         )
@@ -463,3 +545,40 @@ class MerchantOnboardingService:
             context={"reference": merchant.public_id},
         )
         return application
+
+    @staticmethod
+    @transaction.atomic
+    def reset_onboarding(user, *, new_email: str = "", entity_type: str = "") -> OnboardingApplication:
+        """Clear KYB/KYC progress and reopen onboarding from scratch for a merchant account."""
+        Policy.require(user, "portal.merchant")
+        if new_email:
+            user.email = new_email.strip().lower()
+            user.save(update_fields=["email"])
+
+        merchant = Merchant.objects.filter(owner=user).first()
+        if merchant is None:
+            return MerchantOnboardingService.start(
+                user,
+                entity_type=entity_type or Merchant.EntityType.INDIVIDUAL,
+            )
+
+        merchant.verification_records.all().delete()
+        merchant.documents.all().delete()
+        merchant.identity_checks.all().delete()
+        BankAccount.objects.filter(merchant=merchant).delete()
+        merchant.agreements.all().delete()
+        merchant.owners.all().delete()
+        merchant.applications.all().delete()
+
+        merchant.status = Merchant.Status.DRAFT
+        merchant.kyc_status = Merchant.VerificationState.NOT_STARTED
+        merchant.kyb_status = Merchant.VerificationState.NOT_STARTED
+        merchant.bank_status = Merchant.VerificationState.NOT_STARTED
+        merchant.agreement_status = Merchant.VerificationState.NOT_STARTED
+        merchant.commercial_status = Merchant.CommercialStatus.INACTIVE
+        merchant.risk_status = Merchant.RiskStatus.CLEAR
+        if entity_type:
+            merchant.entity_type = entity_type
+        merchant.save()
+
+        return MerchantOnboardingService.start(user, entity_type=merchant.entity_type)

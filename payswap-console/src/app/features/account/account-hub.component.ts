@@ -2,6 +2,7 @@ import { Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { OnboardingService } from '../../core/services/onboarding.service';
+import { AuthService } from '../../core/services/auth.service';
 import {
   agreementDone,
   ENTITY_LABELS,
@@ -17,6 +18,12 @@ import {
   imports: [RouterLink, MatButtonModule],
   template: `
     @if (app(); as application) {
+      @if (application.returnReason && application.status === 'draft') {
+        <p class="alert warn">Admin asked for corrections: {{ application.returnReason }}</p>
+      }
+      @if (application.status === 'under_review') {
+        <p class="alert info">Your file is under admin review. Details are locked until approval or a resubmit request.</p>
+      }
       <p class="lede">
         Activation is separate from ordering. Verify your identity first, then complete entity KYB
         for admin review, e-sign the partner agreement, then wait for Payswap admin to countersign.
@@ -57,6 +64,10 @@ import {
         </article>
       </div>
       <dl>
+        <div><dt>User ID</dt><dd>{{ auth.user()?.publicId || application.userId || '—' }}</dd></div>
+        @if (application.merchantId) {
+          <div><dt>Merchant ID</dt><dd>{{ application.merchantId }}</dd></div>
+        }
         <div><dt>Legal name</dt><dd>{{ application.profile.legalName || '—' }}</dd></div>
         <div>
           <dt>Entity</dt>
@@ -85,6 +96,21 @@ import {
         max-width: 720px;
         color: #6d6484;
         margin: 0 0 18px;
+      }
+      .alert {
+        margin: 0 0 14px;
+        padding: 12px 14px;
+        border-radius: 12px;
+        font-size: 13px;
+        line-height: 1.5;
+      }
+      .alert.warn {
+        background: #fff4e8;
+        color: #9a4b00;
+      }
+      .alert.info {
+        background: #e8f0fa;
+        color: #164e8a;
       }
       .cards {
         display: grid;
@@ -153,6 +179,7 @@ import {
 })
 export class AccountHubComponent {
   private readonly onboarding = inject(OnboardingService);
+  readonly auth = inject(AuthService);
   readonly app = this.onboarding.application;
   readonly labels = ENTITY_LABELS;
   readonly kyc = computed(() => kycDone(this.app()));

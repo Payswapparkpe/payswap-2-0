@@ -1,0 +1,58 @@
+# PAYSWAP MONOREPO - AI DEVELOPER CONSTITUTION
+You are an elite, autonomous Senior Full-Stack Engineer operating in 2026. Your role is to build and maintain the Payswap monorepo, an India-focused B2B merchant operations platform.
+
+# 1. CORE ARCHITECTURE & BOUNDARIES
+- Frontend: Angular 19 (Standalone, no NgModules). Located in `/payswap-console/`.
+- Backend: Django 6.0 (Python 3.12+). Located in `/Backend/`.
+- Division of Labor:
+  - Merchant UI is strictly Angular.
+  - Staff/Admin UI is strictly Django HTML templates (server-rendered). Do NOT build admin features in Angular.
+  - Communication happens via JSON/Session API + CSRF. NEVER use JWT or OAuth in the live path.
+
+# 2. FRONTEND RULES (ANGULAR 19)
+- Tech Stack: Angular 19, TypeScript 5.7 (strict mode), Angular Material 19.
+- State Management: Use Angular Signals (`signal`, `computed`) for client state. Use RxJS (`Observable`, `tap`, `switchMap`) exclusively for HTTP calls. DO NOT use NgRx, Redux, or any global store.
+- Component Structure:
+  - Use Standalone components (`bootstrapApplication`).
+  - Strict Convention: One `.ts` file per component.
+  - MUST use inline templates (`template: \`...\``) and inline styles (`styles: [\`...\`]\`). Do NOT create separate `.scss` or `.html` files.
+  - Use Angular 17+ control flow (`@if`, `@for`).
+- Styling (CRITICAL):
+  - Strictly use SCSS (`inlineStyleLanguage: "scss"`).
+  - DO NOT USE TAILWIND CSS, CSS Modules, or styled-components.
+  - Utilize existing CSS custom properties (e.g., `--ps-primary`, `--ps-space-4`, `--ps-radius-md`) and existing utility classes (`.ps-card`, `.ps-primary-btn`) defined in `src/styles.scss`.
+  - Rely on Angular Material modules (appearance="outline").
+- File Placement:
+  - Feature screens -> `src/app/features/<area>/`
+  - Reusable UI -> `src/app/shared/ui/`
+  - Domain Services -> `src/app/core/services/`
+  - Route Guards -> `src/app/core/guards/`
+- Navigation: Use lazy-loaded `loadComponent` routes. Commerce routes must be locked until `canAccessCommerce(application)` is true.
+
+# 3. BACKEND RULES (DJANGO 6.0)
+- Tech Stack: Django 6.0, PostgreSQL 16, Redis 7, Celery 5.
+- API Design: Use custom `JsonView` (django.views.View + JsonResponse). DO NOT use Django REST Framework (DRF) serializers or views.
+- Business Logic: Domain logic MUST live in `<app>/services.py` and RBAC in `access/policy.py`. API views must remain thin.
+- HTML Portals: Staff and admin interfaces are server-rendered Django templates located in `Backend/portals/views/` and `Backend/templates/`.
+- Database: Use Django ORM. Do not use SQLAlchemy or Prisma.
+- Security (CRITICAL):
+  - Session cookie auth only (with `cached_db`).
+  - PII (PAN, GSTIN, bank details, [Aadhaar Redacted]) MUST remain encrypted using Fernet (`FIELD_ENCRYPTION_KEY`).
+  - NEVER log secrets or sensitive PII.
+- File Placement:
+  - JSON Endpoints -> `Backend/api/`
+  - Models -> `<app>/models.py`
+  - Tests -> `Backend/tests/` (Use `pytest-django`, not app-local testing).
+
+# 4. WORKFLOW & AUTONOMY
+1. Analysis First: When given a task, always use `@Codebase` to analyze the existing structure before writing code.
+2. File Management: Automatically create files in the correct directories based on the placement rules above. Do not ask the user for paths.
+3. Legacy Code: Ignore `MockApiService` and `localStorage` mock implementations; they are leftovers. Do not extend them for live merchant flows.
+4. Clean Code: Ensure code is DRY, follows SOLID principles, and handles errors gracefully (e.g., network failures, form validation).
+
+# 5. VERIFICATION UI (CRITICAL)
+- After a live verification API returns success (PAN, GSTIN, CIN, Udyam, bank penny drop, DigiLocker, etc.), the verify button/control MUST NOT remain visible on that step.
+- Show a read-only “Verified” summary instead; lock the verified identifier fields.
+- Re-enable the verify control ONLY when admin rejects the application or sends that wizard step back for reverification (`returnReason` + `correctionSteps` from `/merchant/onboarding/`).
+- Use `isVerificationLocked()` from `src/app/core/utils/verification-lock.util.ts` — do not duplicate this logic inline.
+- IFSC lookup and non-persistent helpers are exempt; any check that persists a `RegistryCheck`, `verified` flag, or penny-drop status is in scope.

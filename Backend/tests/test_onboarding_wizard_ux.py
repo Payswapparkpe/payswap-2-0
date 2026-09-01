@@ -62,6 +62,56 @@ class TestOnboardingWizard:
         assert account.get_account_number() == "50100012345678"
         assert account.verified is False
 
+    def test_business_save_mirrors_owners_for_individual(self, merchant_user):
+        application = MerchantOnboardingService.start(merchant_user, entity_type="INDIVIDUAL")
+        MerchantOnboardingService.save_step(
+            application,
+            key="business",
+            actor=merchant_user,
+            data={
+                "legal_name": "Sandeep Kumar",
+                "brand_name": "Sandeep Kumar",
+                "pan": "ABCDE1234F",
+                "owner_name": "Sandeep Kumar",
+                "owner_dob": "1990-01-01",
+                "authorized_signatory": "Sandeep Kumar",
+                "designation": "self",
+            },
+        )
+        owners = application.steps.get(key="owners")
+        assert owners.status == StepStatus.COMPLETE
+        assert decrypt_step_data(owners.data)["owner_name"] == "Sandeep Kumar"
+
+    def test_api_onboarding_put_uses_step_not_navigation_target(self, client, merchant_user):
+        application = MerchantOnboardingService.start(merchant_user, entity_type="INDIVIDUAL")
+        client.force_login(merchant_user)
+        response = client.put(
+            "/api/merchant/onboarding/",
+            data={
+                "step": "profile",
+                "currentStep": "bank",
+                "profile": {
+                    "brandName": "Sandeep Kumar",
+                    "legalName": "Sandeep Kumar",
+                    "entityType": "individual",
+                },
+                "signatory": {
+                    "name": "Sandeep Kumar",
+                    "pan": "ABCDE1234F",
+                    "dob": "1990-01-01",
+                },
+                "bank": {},
+            },
+            content_type="application/json",
+        )
+        assert response.status_code == 200
+        application.refresh_from_db()
+        business = application.steps.get(key="business")
+        bank = application.steps.get(key="bank")
+        assert business.status == StepStatus.IN_PROGRESS
+        assert bank.status == StepStatus.NOT_STARTED
+        assert response.json()["currentStep"] == "profile"
+
 
 @pytest.mark.django_db
 class TestAgreementPreviewAndVerificationCentre:

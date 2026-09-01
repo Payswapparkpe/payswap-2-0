@@ -33,7 +33,7 @@ import { prevOnboardingStep, resolvedSignatoryIsOwner, rulesFor } from '../../..
         </p>
         <p>
           Signatory {{ application.signatory.verified ? 'verified' : 'pending' }} via
-          {{ application.signatory.path === 'digilocker' ? 'DigiLocker + physical documents' : application.signatory.path || '—' }}
+          {{ application.signatory.path === 'digilocker' ? 'DigiLocker' : application.signatory.path || '—' }}
         </p>
         <p>
           {{
@@ -64,13 +64,13 @@ import { prevOnboardingStep, resolvedSignatoryIsOwner, rulesFor } from '../../..
 
     <h4>Declarations</h4>
     <div class="checks">
-      <mat-checkbox [(ngModel)]="application.compliance.authorisedDeclaration">
+      <mat-checkbox [(ngModel)]="application.compliance.authorisedDeclaration" [disabled]="readonly">
         I am authorised to onboard this business with Payswap
       </mat-checkbox>
-      <mat-checkbox [(ngModel)]="application.compliance.truthDeclaration">
+      <mat-checkbox [(ngModel)]="application.compliance.truthDeclaration" [disabled]="readonly">
         Information and documents provided are true and complete
       </mat-checkbox>
-      <mat-checkbox [(ngModel)]="application.compliance.dpdpConsent">
+      <mat-checkbox [(ngModel)]="application.compliance.dpdpConsent" [disabled]="readonly">
         DPDP consent for processing KYC / KYB data
       </mat-checkbox>
     </div>
@@ -163,6 +163,7 @@ import { prevOnboardingStep, resolvedSignatoryIsOwner, rulesFor } from '../../..
 export class StepReviewComponent {
   private readonly onboarding = inject(OnboardingService);
   @Input({ required: true }) application!: KycApplication;
+  @Input() readonly = false;
   @Output() save = new EventEmitter<KycApplication>();
 
   readonly labels = ENTITY_LABELS;

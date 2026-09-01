@@ -12,6 +12,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         MERCHANT = "MERCHANT", "Merchant"
 
     email = models.EmailField(unique=True)
+    public_id = models.CharField(max_length=20, unique=True, db_index=True)
     mobile = models.CharField(max_length=15, blank=True)
     name = models.CharField(max_length=150, blank=True)
     user_type = models.CharField(max_length=20, choices=UserType.choices)
@@ -39,7 +40,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         ordering = ["email"]
 
     def __str__(self):
-        return self.email
+        return self.public_id or self.email
 
     @property
     def display_name(self):

@@ -2,10 +2,12 @@ import { computed, inject, Injectable, signal } from '@angular/core';
 import { Observable, catchError, map, of, switchMap, tap } from 'rxjs';
 import { User } from '../models/onboarding.models';
 import { ApiService } from './api.service';
+import { OtpChannel, OtpService } from './otp.service';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly api = inject(ApiService);
+  private readonly otp = inject(OtpService);
 
   readonly user = signal<User | null>(null);
   readonly registrationPending = signal(false);
@@ -80,13 +82,11 @@ export class AuthService {
       );
   }
 
-  resendRegistrationOtp(channel: 'mobile' | 'email'): Observable<void> {
+  resendRegistrationOtp(channel: OtpChannel): Observable<void> {
     if (this.registrationPending() || !this.user()) {
-      return this.api
-        .postJson('/merchant/auth/register', { action: 'send_otp', channel })
-        .pipe(map(() => undefined));
+      return this.otp.resendRegistrationOtp(channel).pipe(map(() => undefined));
     }
-    return this.api.postJson('/merchant/auth/verify', { action: 'send_otp', channel }).pipe(map(() => undefined));
+    return this.otp.resendAccountOtp(channel).pipe(map(() => undefined));
   }
 
   private confirmAccountOtp(channel: 'mobile' | 'email', code: string): Observable<User> {
@@ -120,9 +120,27 @@ export class AuthService {
     return this.confirmAccountOtp(channel, code);
   }
 
-  resetPassword(identifier: string, _code: string, _password: string): Observable<void> {
+  resetPassword(identifier: string): Observable<void> {
     return this.api
       .postJson('/merchant/auth/password-reset', { action: 'request', identifier })
+      .pipe(map(() => undefined));
+  }
+
+  validatePasswordResetLink(uid: string, token: string): Observable<void> {
+    return this.api
+      .postJson('/merchant/auth/password-reset', { action: 'validate', uid, token })
+      .pipe(map(() => undefined));
+  }
+
+  confirmPasswordReset(uid: string, token: string, password: string, confirmPassword: string): Observable<void> {
+    return this.api
+      .postJson('/merchant/auth/password-reset', {
+        action: 'confirm',
+        uid,
+        token,
+        password,
+        confirmPassword,
+      })
       .pipe(map(() => undefined));
   }
 

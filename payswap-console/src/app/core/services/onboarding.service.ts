@@ -1,6 +1,6 @@
 import { inject, Injectable, signal } from '@angular/core';
-import { Observable, tap } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { Observable, tap, catchError, throwError } from 'rxjs';
+import { map, switchMap } from 'rxjs/operators';
 import {
   CatalogItem,
   FulfilmentFile,
@@ -16,11 +16,13 @@ import {
 } from '../models/onboarding.models';
 import { ApiService } from './api.service';
 import { MockApiService, PartnerSummary } from './mock-api.service';
+import { OtpService } from './otp.service';
 
 @Injectable({ providedIn: 'root' })
 export class OnboardingService {
   private readonly api = inject(ApiService);
   private readonly mock = inject(MockApiService);
+  private readonly otp = inject(OtpService);
 
   readonly application = signal<KycApplication | null>(null);
   readonly saving = signal(false);
@@ -36,12 +38,24 @@ export class OnboardingService {
   }
 
   save(application: KycApplication): Observable<KycApplication> {
+    const completedStep = this.application()?.currentStep;
     this.saving.set(true);
     this.application.set(application);
-    return this.api.putJson<KycApplication>('/merchant/onboarding/', application).pipe(
+    const payload =
+      completedStep && completedStep !== application.currentStep
+        ? { ...application, step: completedStep }
+        : application;
+    return this.api.putJson<KycApplication>('/merchant/onboarding/', payload).pipe(
       tap((app) => {
         this.application.set(app);
         this.saving.set(false);
+      }),
+      catchError((err) => {
+        this.saving.set(false);
+        if (completedStep) {
+          this.load().subscribe();
+        }
+        return throwError(() => err);
       }),
     );
   }
@@ -56,6 +70,14 @@ export class OnboardingService {
 
   goTo(step: OnboardingStep): Observable<KycApplication> {
     return this.patch({ currentStep: step });
+  }
+
+  navigateStep(step: OnboardingStep): void {
+    const current = this.application();
+    if (!current) {
+      return;
+    }
+    this.application.set({ ...current, currentStep: step });
   }
 
   submit(): Observable<KycApplication> {
@@ -167,11 +189,15 @@ export class OnboardingService {
   }
 
   requestFileOtp(orderId: string): Observable<{ sentTo: string }> {
-    return this.mock.requestFileOtp(orderId);
+    return this.otp.sendSecurityOtp('email').pipe(
+      map(() => ({ sentTo: 'your registered email' })),
+    );
   }
 
   revealFilePassword(orderId: string, code: string): Observable<{ password: string; file: FulfilmentFile }> {
-    return this.mock.revealFilePassword(orderId, code);
+    return this.otp.confirmSecurityOtp('email', code).pipe(
+      switchMap(() => this.mock.revealFilePassword(orderId, code)),
+    );
   }
 
   loadMail(): Observable<MailMessage[]> {

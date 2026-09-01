@@ -64,13 +64,21 @@ export class ApiService {
     );
   }
 
+  upload<T>(path: string, file: File, fields: Record<string, string> = {}): Observable<T> {
+    const body = new FormData();
+    body.append('file', file, file.name);
+    Object.entries(fields).forEach(([key, value]) => body.append(key, value));
+    return this.postForm<T>(path, body);
+  }
+
   postForm<T>(path: string, body: FormData): Observable<T> {
-    const headers = this.csrfToken ? new HttpHeaders({ 'X-CSRFToken': this.csrfToken }) : undefined;
     return this.bootstrapCsrf().pipe(
+      // Headers must be built after the token lands, otherwise the first upload
+      // of a session posts without X-CSRFToken and is rejected.
       switchMap(() =>
         this.http.post<T>(this.url(path), body, {
           withCredentials: true,
-          headers,
+          headers: new HttpHeaders({ 'X-CSRFToken': this.csrfToken }),
         }),
       ),
       catchError((err) => this.fail(err)),

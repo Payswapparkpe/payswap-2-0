@@ -15,7 +15,7 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 
 from audit.services import AuditService
-from core.crypto import encrypt_text, lookup_hash
+from core.crypto import decrypt_text, encrypt_text, lookup_hash
 from integrations.cashfree import CashfreeClient, CashfreeError, new_verification_id
 from merchants.models import Merchant
 from merchants.services import next_public_id
@@ -47,6 +47,23 @@ HANDLED_EVENTS = {
 }
 
 
+def digilocker_redirect_url(explicit: str = "") -> str:
+    """Cashfree requires an https redirect URL when creating DigiLocker consent links."""
+    redirect = (explicit or "").strip()
+    if redirect.startswith("https://"):
+        return redirect
+    configured = getattr(settings, "CASHFREE_DIGILOCKER_REDIRECT_URL", "").strip()
+    if configured.startswith("https://"):
+        return configured
+    console = getattr(settings, "PUBLIC_CONSOLE_URL", "").strip().rstrip("/")
+    if console.startswith("https://"):
+        return f"{console}/app/onboarding"
+    backend = getattr(settings, "PUBLIC_BASE_URL", "").strip().rstrip("/")
+    if backend.startswith("https://"):
+        return f"{backend}/merchant/verification/"
+    return "https://www.cashfree.com"
+
+
 class DigiLockerService:
     @staticmethod
     def _client() -> CashfreeClient:
@@ -74,7 +91,7 @@ class DigiLockerService:
             user=actor, purpose=ConsentRecord.Purpose.DIGILOCKER_ACCESS, request=request
         )
         verification_id = new_verification_id("dgl")
-        redirect_url = f"{settings.PUBLIC_BASE_URL}/merchant/verification/"
+        redirect_url = digilocker_redirect_url()
         try:
             created = DigiLockerService._client().digilocker_create_url(
                 verification_id=verification_id,
@@ -115,6 +132,152 @@ class DigiLockerService:
             request=request,
         )
         return str(created.get("url") or "")
+
+    @staticmethod
+    def start_kyc(
+        *,
+        merchant,
+        actor,
+        request=None,
+        documents: list[str] | None = None,
+        redirect_url: str = "",
+    ) -> dict:
+        """Create a DigiLocker consent URL for onboarding (Aadhaar via DigiLocker)."""
+        if not getattr(settings, "FEATURE_DIGILOCKER", True):
+            raise ValidationError("Aadhaar verification via DigiLocker is not enabled.")
+        VerificationService.record_consent(
+            user=actor, purpose=ConsentRecord.Purpose.DIGILOCKER_ACCESS, request=request
+        )
+        verification_id = new_verification_id("dgl")
+        redirect = digilocker_redirect_url(redirect_url)
+        # Cashfree SDK (2023-12-18) only accepts AADHAAR in document_requested.
+        docs = documents or ["AADHAAR"]
+        if not getattr(settings, "AUTH_TEST_MODE", False):
+            docs = [doc for doc in docs if doc == "AADHAAR"] or ["AADHAAR"]
+        if getattr(settings, "AUTH_TEST_MODE", False):
+            record = VerificationRecord.objects.create(
+                merchant=merchant,
+                requested_by=actor,
+                public_id=next_public_id("VRF", VerificationRecord),
+                verification_type=VerificationRecord.Type.AADHAAR,
+                verification_id=verification_id,
+                reference_id="0",
+                status=VerificationRecord.Status.PENDING,
+                document_masked="",
+            )
+            AuditService.record(
+                actor=actor,
+                action="verification.digilocker.started",
+                resource_type="verification",
+                resource_id=record.public_id,
+                after={"provider_ref": record.reference_id, "documents": docs, "test_mode": True},
+                request=request,
+            )
+            return {
+                "verificationId": verification_id,
+                "referenceId": 0,
+                "publicId": record.public_id,
+                "url": "",
+                "status": "PENDING",
+                "documentRequested": docs,
+            }
+        try:
+            created = DigiLockerService._client().digilocker_create_url(
+                verification_id=verification_id,
+                documents=docs,
+                redirect_url=redirect,
+                user_flow="signup",
+            )
+        except CashfreeError as exc:
+            if exc.retryable:
+                raise ValidationError(
+                    "Aadhaar verification is temporarily unavailable. Please try again shortly."
+                ) from exc
+            raise ValidationError("DigiLocker could not be started. Please retry.") from exc
+
+        record = VerificationRecord.objects.create(
+            merchant=merchant,
+            requested_by=actor,
+            public_id=next_public_id("VRF", VerificationRecord),
+            verification_type=VerificationRecord.Type.AADHAAR,
+            verification_id=verification_id,
+            reference_id=str(created.get("reference_id") or ""),
+            status=VerificationRecord.Status.PENDING,
+            document_masked="",
+        )
+        record.set_provider_response(created)
+        record.save(update_fields=["provider_response_encrypted"])
+        AuditService.record(
+            actor=actor,
+            action="verification.digilocker.started",
+            resource_type="verification",
+            resource_id=record.public_id,
+            after={"provider_ref": record.reference_id, "documents": docs},
+            request=request,
+        )
+        return {
+            "verificationId": verification_id,
+            "referenceId": int(created.get("reference_id") or 0),
+            "publicId": record.public_id,
+            "url": str(created.get("url") or ""),
+            "status": "PENDING",
+            "documentRequested": docs,
+        }
+
+    @staticmethod
+    def digilocker_status_payload(*, record: VerificationRecord) -> dict:
+        DigiLockerService.sync_status(record=record)
+        record.refresh_from_db()
+        raw = record.get_provider_response() or {}
+        user_details = dict(raw.get("user_details") or {})
+        if not user_details and record.verified_data_encrypted:
+            try:
+                bundle = json.loads(decrypt_text(record.verified_data_encrypted))
+                if isinstance(bundle.get("user_details"), dict):
+                    user_details.update(bundle["user_details"])
+            except (json.JSONDecodeError, TypeError):
+                pass
+        if record.verified_name and not user_details.get("name"):
+            user_details["name"] = record.verified_name
+        if record.verified_dob and not user_details.get("dob"):
+            user_details["dob"] = record.verified_dob
+        documents = []
+        if record.status == VerificationRecord.Status.VERIFIED:
+            name = str(user_details.get("name") or record.verified_name or "")
+            aadhaar = str(
+                user_details.get("uid")
+                or user_details.get("eaadhaar")
+                or user_details.get("aadhaar")
+                or record.document_masked
+                or "Verified"
+            )
+            if name or aadhaar:
+                documents.append({"type": "AADHAAR", "name": name, "idMasked": aadhaar})
+            for doc_type, masked_key in (("PAN", "pan"), ("DRIVING_LICENSE", "dl")):
+                masked = str(user_details.get(masked_key) or "")
+                if masked:
+                    documents.append({"type": doc_type, "name": name, "idMasked": masked})
+        status_map = {
+            VerificationRecord.Status.PENDING: "PENDING",
+            VerificationRecord.Status.PROCESSING: "PENDING",
+            VerificationRecord.Status.VERIFIED: "AUTHENTICATED",
+            VerificationRecord.Status.FAILED: "FAILED",
+            VerificationRecord.Status.CANCELLED: "FAILED",
+            VerificationRecord.Status.EXPIRED: "FAILED",
+        }
+        return {
+            "verificationId": record.verification_id,
+            "referenceId": int(record.reference_id or 0),
+            "publicId": record.public_id,
+            "status": status_map.get(record.status, "PENDING"),
+            "documents": documents,
+            "userDetails": {
+                "name": str(user_details.get("name") or record.verified_name or ""),
+                "dob": str(user_details.get("dob") or record.verified_dob or ""),
+                "mobile": str(user_details.get("mobile") or ""),
+                "gender": str(user_details.get("gender") or record.verified_gender or ""),
+            },
+        }
 
     @staticmethod
     def _apply_status(record: VerificationRecord, status: str, payload: dict, *, actor_is_system=True):
@@ -195,6 +358,36 @@ class DigiLockerService:
     @staticmethod
     def sync_status(*, record: VerificationRecord):
         """Poll-based completion for environments without inbound webhooks."""
+        if getattr(settings, "AUTH_TEST_MODE", False):
+            owner = record.merchant.owner
+            name = (owner.name or record.merchant.business_name or owner.email or "Test User").strip()
+            payload = {
+                "status": "AUTHENTICATED",
+                "user_details": {"name": name, "pan": "XXXXX1234F", "dob": "1990-01-01"},
+            }
+            DigiLockerService._apply_status(record, "AUTHENTICATED", payload)
+            now = timezone.now()
+            record.status = VerificationRecord.Status.VERIFIED
+            record.sub_status = "DOCUMENT_RETRIEVED"
+            record.completed_at = now
+            record.expires_at = now + VerificationService.cache_window()
+            record.last_checked_at = now
+            record.verified_name = name[:150]
+            record.set_provider_response(payload)
+            record.save(
+                update_fields=[
+                    "status",
+                    "sub_status",
+                    "completed_at",
+                    "expires_at",
+                    "last_checked_at",
+                    "verified_name",
+                    "provider_response_encrypted",
+                ]
+            )
+            record.merchant.kyc_status = Merchant.VerificationState.VERIFIED
+            record.merchant.save(update_fields=["kyc_status"])
+            return record
         status_payload = DigiLockerService._client().digilocker_get_status(
             verification_id=record.verification_id
         )

@@ -20,25 +20,44 @@ def _is_encrypted(value) -> bool:
     return isinstance(value, str) and value.startswith(_FERNET_PREFIX)
 
 
+def _walk(value, transform):
+    """Rebuild *value*, applying *transform* to every sensitive key at any depth.
+
+    Person KYC, director, and beneficial-owner records are stored as nested
+    dicts and lists inside a step payload, so a top-level-only pass would leave
+    their PAN and Aadhaar in plaintext.
+    """
+    if isinstance(value, dict):
+        return {
+            key: transform(key, item) if key in SENSITIVE_STEP_KEYS else _walk(item, transform)
+            for key, item in value.items()
+        }
+    if isinstance(value, list):
+        return [_walk(item, transform) for item in value]
+    return value
+
+
 def encrypt_step_data(data: dict) -> dict:
-    """Return a copy of *data* with sensitive keys encrypted (idempotent)."""
-    protected = dict(data)
-    for key in SENSITIVE_STEP_KEYS:
-        value = protected.get(key)
+    """Return a copy of *data* with sensitive keys encrypted at any depth (idempotent)."""
+
+    def protect(_key, value):
         if value and not _is_encrypted(str(value)):
-            protected[key] = encrypt_text(str(value).strip())
-    return protected
+            return encrypt_text(str(value).strip())
+        return value
+
+    return _walk(dict(data), protect)
 
 
 def decrypt_step_data(data: dict | None) -> dict:
     """Return a plaintext copy. Legacy plaintext values pass through unchanged
     so rows written before encryption-at-rest remain readable."""
-    revealed = dict(data or {})
-    for key in SENSITIVE_STEP_KEYS:
-        value = revealed.get(key)
+
+    def reveal(_key, value):
         if value and _is_encrypted(str(value)):
-            revealed[key] = decrypt_text(str(value))
-    return revealed
+            return decrypt_text(str(value))
+        return value
+
+    return _walk(dict(data or {}), reveal)
 
 
 def mask_step_value(key: str, value) -> str:
@@ -52,9 +71,8 @@ def mask_step_value(key: str, value) -> str:
 
 
 def display_step_data(data: dict | None) -> dict:
-    """Display-safe copy: ordinary fields in clear, sensitive fields masked."""
-    revealed = decrypt_step_data(data)
-    return {key: mask_step_value(key, value) for key, value in revealed.items()}
+    """Display-safe copy: ordinary fields in clear, sensitive fields masked at any depth."""
+    return _walk(decrypt_step_data(data), mask_step_value)
 
 
 def merge_step_data(existing_plain: dict, submitted: dict) -> dict:

@@ -20,7 +20,7 @@ import {
   User,
 } from '../models/onboarding.models';
 import { StorageService } from './storage.service';
-import { authorisationSlotId, enforcePersonaKycFirst, needsOwnerPersonKyc } from '../config/entity-rules';
+import { authorisationSlotId, enforcePersonaKycFirst, needsAuthSignatoryPersonKyc, needsOwnerPersonKyc } from '../config/entity-rules';
 import { appendEvent, generateFilePassword, hydrateOrder, invoiceIdFor, publicOrder, sampleCodes } from '../config/order.util';
 
 const LATENCY = 550;
@@ -169,6 +169,9 @@ export class MockApiService {
       }
       if (needsOwnerPersonKyc(next) && !next.ownerKyc?.verified) {
         throw new Error('Complete business-owner KYC. The authorised signatory is not an owner of this entity.');
+      }
+      if (needsAuthSignatoryPersonKyc(next) && !next.authSignatoryKyc?.verified) {
+        throw new Error('Complete authorised-signatory KYC before submitting.');
       }
       const authSlot = authorisationSlotId(next.profile.entityType);
       if (authSlot && !next.documents.some((d) => d.slotId === authSlot)) {
@@ -458,13 +461,10 @@ export class MockApiService {
 
   revealFilePassword(
     orderId: string,
-    code: string,
+    _code: string,
   ): Observable<{ password: string; file: FulfilmentFile }> {
     return this.mutate((db) => {
       const user = this.requireUser(db);
-      if (code !== DEMO_OTP) {
-        throw new Error('Invalid OTP. Use 123456 in this demo.');
-      }
       const order = db.orders.find((o) => o.id === orderId);
       if (!order || order.userId !== user.id) {
         throw new Error('Order not found.');

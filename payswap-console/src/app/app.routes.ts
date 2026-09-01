@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { activatedProfileGuard, appHomeGuard, commerceGuard } from './core/guards/activation.guard';
 import { guestGuard, verifiedGuard } from './core/guards/auth.guards';
 
 export const routes: Routes = [
@@ -17,10 +18,21 @@ export const routes: Routes = [
     loadComponent: () => import('./features/auth/verify/verify.component').then((m) => m.VerifyComponent),
   },
   {
+    path: 'digilocker-return',
+    loadComponent: () =>
+      import('./features/auth/digilocker-return/digilocker-return.component').then((m) => m.DigilockerReturnComponent),
+  },
+  {
     path: 'forgot-password',
     canActivate: [guestGuard],
     loadComponent: () =>
       import('./features/auth/forgot-password/forgot-password.component').then((m) => m.ForgotPasswordComponent),
+  },
+  {
+    path: 'reset-password/:uid/:token',
+    canActivate: [guestGuard],
+    loadComponent: () =>
+      import('./features/auth/reset-password/reset-password.component').then((m) => m.ResetPasswordComponent),
   },
   {
     path: 'staff-portal',
@@ -35,19 +47,23 @@ export const routes: Routes = [
     children: [
       {
         path: '',
+        canActivate: [appHomeGuard],
         loadComponent: () => import('./features/console/home/home.component').then((m) => m.HomeComponent),
       },
       {
         path: 'po',
+        canActivate: [commerceGuard],
         loadComponent: () => import('./features/commerce/create-po.component').then((m) => m.CreatePoComponent),
       },
       {
         path: 'orders/:orderId',
+        canActivate: [commerceGuard],
         loadComponent: () =>
           import('./features/commerce/order-detail.component').then((m) => m.OrderDetailComponent),
       },
       {
         path: 'orders',
+        canActivate: [commerceGuard],
         loadComponent: () => import('./features/commerce/orders.component').then((m) => m.OrdersComponent),
       },
       {
@@ -57,10 +73,12 @@ export const routes: Routes = [
       },
       {
         path: 'vouchers',
+        canActivate: [commerceGuard],
         loadComponent: () => import('./features/commerce/vouchers.component').then((m) => m.VouchersComponent),
       },
       {
         path: 'cards',
+        canActivate: [commerceGuard],
         loadComponent: () => import('./features/commerce/cards.component').then((m) => m.CardsComponent),
       },
       {
@@ -78,15 +96,18 @@ export const routes: Routes = [
       },
       {
         path: 'business',
+        canActivate: [activatedProfileGuard],
         loadComponent: () =>
           import('./features/profile/business-profile.component').then((m) => m.BusinessProfileComponent),
       },
       {
         path: 'bank',
+        canActivate: [activatedProfileGuard],
         loadComponent: () => import('./features/profile/bank-profile.component').then((m) => m.BankProfileComponent),
       },
       {
         path: 'documents',
+        canActivate: [activatedProfileGuard],
         loadComponent: () =>
           import('./features/profile/documents-profile.component').then((m) => m.DocumentsProfileComponent),
       },

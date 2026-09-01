@@ -36,7 +36,7 @@ export const guestGuard: CanActivateFn = () => {
     if (!user.mobileVerified || !user.emailVerified) {
       return router.createUrlTree(['/verify']);
     }
-    return router.createUrlTree(['/app']);
+    return router.createUrlTree(['/app/account']);
   };
   if (auth.user()) {
     return proceed();

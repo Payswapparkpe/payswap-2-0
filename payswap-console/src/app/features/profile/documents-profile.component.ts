@@ -3,6 +3,7 @@ import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { OnboardingService } from '../../core/services/onboarding.service';
 import { documentsFor } from '../../core/config/entity-documents';
+import { isApplicationEditable } from '../../core/models/onboarding.models';
 
 @Component({
   selector: 'app-documents-profile',
@@ -13,7 +14,9 @@ import { documentsFor } from '../../core/config/entity-documents';
       <article class="card">
         <header>
           <h3>Uploaded files</h3>
-          <a mat-stroked-button routerLink="/app/onboarding">Manage in wizard</a>
+          @if (editable()) {
+            <a mat-stroked-button routerLink="/app/onboarding">Manage in wizard</a>
+          }
         </header>
         <ul>
           @for (slot of slots(); track slot.id) {
@@ -70,6 +73,7 @@ import { documentsFor } from '../../core/config/entity-documents';
 })
 export class DocumentsProfileComponent {
   readonly onboarding = inject(OnboardingService);
+  readonly editable = computed(() => isApplicationEditable(this.onboarding.application()));
   readonly slots = computed(() => {
     const app = this.onboarding.application();
     if (!app) {

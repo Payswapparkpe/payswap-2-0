@@ -1,8 +1,8 @@
-import { Component, inject } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { OnboardingService } from '../../core/services/onboarding.service';
-import { ENTITY_LABELS } from '../../core/models/onboarding.models';
+import { ENTITY_LABELS, isApplicationEditable } from '../../core/models/onboarding.models';
 import { BUSINESS_CATEGORIES, MONTHLY_VOLUMES } from '../../core/config/business-categories';
 
 @Component({
@@ -14,7 +14,9 @@ import { BUSINESS_CATEGORIES, MONTHLY_VOLUMES } from '../../core/config/business
       <article class="card">
         <header>
           <h3>Submitted business details</h3>
-          <a mat-stroked-button routerLink="/app/onboarding">Edit in wizard</a>
+          @if (editable()) {
+            <a mat-stroked-button routerLink="/app/onboarding">Edit in wizard</a>
+          }
         </header>
         <dl>
           <div><dt>Brand</dt><dd>{{ app.profile.brandName || '—' }}</dd></div>
@@ -87,6 +89,7 @@ import { BUSINESS_CATEGORIES, MONTHLY_VOLUMES } from '../../core/config/business
 export class BusinessProfileComponent {
   readonly onboarding = inject(OnboardingService);
   readonly labels = ENTITY_LABELS;
+  readonly editable = computed(() => isApplicationEditable(this.onboarding.application()));
 
   categoryLabel(category: string): string {
     return BUSINESS_CATEGORIES.find((c) => c.id === category)?.label || '—';

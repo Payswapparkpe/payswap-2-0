@@ -1,11 +1,12 @@
-import { Injectable } from '@angular/core';
-import { delay, Observable, of } from 'rxjs';
-import { panEntityHint } from '../models/onboarding.models';
+import { Injectable, inject } from '@angular/core';
+import { Observable, last, map, switchMap, take, takeWhile, timer } from 'rxjs';
+import { ApiService } from './api.service';
 
 /** Shared envelope used by the identity / KYB verification APIs (server-side when live). */
 export interface VerificationEnvelope {
   verificationId: string;
   referenceId: number;
+  publicId?: string;
 }
 
 export interface DigilockerAccountResult extends VerificationEnvelope {
@@ -29,6 +30,12 @@ export interface DigilockerDocument {
 export interface DigilockerStatusResult extends VerificationEnvelope {
   status: 'PENDING' | 'AUTHENTICATED' | 'FAILED';
   documents: DigilockerDocument[];
+  userDetails?: {
+    name: string;
+    dob: string;
+    mobile: string;
+    gender: string;
+  };
 }
 
 export interface PanVerifyResult extends VerificationEnvelope {
@@ -36,6 +43,76 @@ export interface PanVerifyResult extends VerificationEnvelope {
   pan: string;
   registeredName: string;
   panType: string;
+  dateOfBirth?: string;
+  incorporationDate?: string;
+  email?: string;
+  mobile?: string;
+  aadhaarLinked?: boolean;
+  address?: { line1: string; line2: string; city: string; state: string; pin: string };
+  nameMatch?: string;
+  nameMatchWarning?: boolean;
+}
+
+export interface GstinVerifyResult extends VerificationEnvelope {
+  valid: boolean;
+  gstin: string;
+  legalName: string;
+  taxpayerType: string;
+  gstinStatus: string;
+  constitutionOfBusiness?: string;
+  dateOfRegistration?: string;
+  principalPlaceAddress?: string;
+  address?: { line1: string; line2: string; city: string; state: string; pin: string };
+  natureOfBusinessActivities?: string[];
+  stateJurisdiction?: string;
+  centerJurisdiction?: string;
+}
+
+export interface UdyamVerifyResult extends VerificationEnvelope {
+  valid: boolean;
+  status: 'VALID' | 'INVALID';
+  udyam: string;
+  enterpriseName: string;
+  ownerName: string;
+  organizationType?: string;
+  enterpriseType?: string;
+  majorActivity?: string;
+  dateOfUdyamRegistration?: string;
+  dateOfIncorporation?: string;
+  dateOfCommencement?: string;
+  address?: { line1: string; line2: string; city: string; state: string; pin: string };
+  ownerNameMatchWarning?: boolean;
+  nicCodes?: Array<{
+    serialNumber: string;
+    nic2Digit: string;
+    nic4Digit: string;
+    nic5Digit: string;
+    activity: string;
+  }>;
+}
+
+export interface CinVerifyResult extends VerificationEnvelope {
+  status: 'VALID' | 'INVALID';
+  cin: string;
+  companyName: string;
+  dateOfIncorporation: string;
+  companyStatus: string;
+  companyEmail?: string;
+  registeredAddress?: { line1: string; line2: string; city: string; state: string; pin: string };
+  directors?: RegistryDirector[];
+}
+
+export interface RegistryDirector {
+  name: string;
+  din: string;
+  designation: string;
+  dob: string;
+  address: string;
+  pan: string;
+  mobile?: string;
+  digiConsent?: boolean;
+  kycVerified?: boolean;
+  kycPath?: 'digilocker';
 }
 
 export interface GstinOptionResult extends VerificationEnvelope {
@@ -50,198 +127,187 @@ export interface GstinListResult extends VerificationEnvelope {
   gstins: Array<Omit<GstinOptionResult, 'verificationId' | 'referenceId'>>;
 }
 
-export interface GstinVerifyResult extends VerificationEnvelope {
-  valid: boolean;
-  gstin: string;
-  legalName: string;
-  taxpayerType: string;
-  gstinStatus: string;
-}
-
-export interface CinVerifyResult extends VerificationEnvelope {
-  status: 'VALID' | 'INVALID';
-  cin: string;
-  companyName: string;
-  dateOfIncorporation: string;
-  companyStatus: string;
-}
-
 export interface BankVerifyResult extends VerificationEnvelope {
   status: 'matched' | 'mismatch';
   accountNumber: string;
   matchedName: string;
+  expectedName?: string;
+  nameMatchCategory?: string;
+  nameMatchScore?: number;
 }
 
-export interface IfscVerifyResult {
+export interface IfscVerifyResult extends VerificationEnvelope {
   bankName: string;
   branch: string;
   ifsc: string;
+  status?: string;
 }
 
-let refSeq = 41000;
+export interface NameAlignmentCheck {
+  kind: string;
+  left: string;
+  right: string;
+  category: string;
+  score: number;
+  ok: boolean;
+}
 
-function envelope(): VerificationEnvelope {
-  refSeq += 1;
-  return {
-    verificationId: `ver_${crypto.randomUUID().slice(0, 8)}`,
-    referenceId: refSeq,
+export interface NameAlignmentResult {
+  ok: boolean;
+  entityType: string;
+  expectedBankName: string;
+  checks: NameAlignmentCheck[];
+  issues: string[];
+  names: {
+    pan: string;
+    aadhaar: string;
+    bank: string;
   };
 }
 
+type VerificationAction = 'check' | 'start' | 'sync' | 'validate';
+
 /**
- * Mock identity / KYB verification client.
- * Live integration will call the same methods from the backend; do not invoke provider APIs from the browser.
+ * Cashfree Secure ID verification client — all provider calls go through Django.
  */
 @Injectable({ providedIn: 'root' })
 export class VerificationService {
-  verifyDigilockerAccount(mobile: string, pan: string): Observable<DigilockerAccountResult> {
-    const missing = pan.toUpperCase().endsWith('9');
-    const status: DigilockerAccountResult['status'] = missing ? 'ACCOUNT_NOT_FOUND' : 'ACCOUNT_EXISTS';
-    return of({
-      ...envelope(),
-      mobile,
-      status,
-      digilockerId: missing ? undefined : crypto.randomUUID(),
-    }).pipe(delay(700));
+  private readonly api = inject(ApiService);
+
+  private post<T>(body: Record<string, unknown>): Observable<T> {
+    return this.api.postJson<T>('/merchant/verification/', body);
   }
 
-  createDigilockerUrl(verificationId: string): Observable<DigilockerUrlResult> {
-    const result: DigilockerUrlResult = {
-      verificationId,
-      referenceId: refSeq,
-      status: 'PENDING',
-      url: `https://digilocker.gov.in/consent/${verificationId}`,
-      documentRequested: ['AADHAAR', 'PAN', 'DRIVING_LICENSE'],
-    };
-    return of(result).pipe(delay(500));
-  }
-
-  getDigilockerStatus(verificationId: string, pan: string, name: string): Observable<DigilockerStatusResult> {
-    const failed = pan.toUpperCase().endsWith('9');
-    const status: DigilockerStatusResult['status'] = failed ? 'FAILED' : 'AUTHENTICATED';
-    const documents: DigilockerDocument[] = failed
-      ? []
-      : [
-          { type: 'PAN', name, idMasked: maskId(pan) },
-          { type: 'AADHAAR', name, idMasked: 'XXXXXXXX1234' },
-          { type: 'DRIVING_LICENSE', name, idMasked: 'KA01********1234' },
-        ];
-    return of({
-      verificationId,
-      referenceId: refSeq,
-      status,
-      documents,
-    }).pipe(delay(900));
-  }
-
-  verifyPan(pan: string): Observable<PanVerifyResult> {
-    const clean = pan.toUpperCase();
-    const invalid = clean.endsWith('0');
-    const hint = panEntityHint(clean);
-    const names: Record<string, string> = {
-      P: 'Priya Sharma',
-      C: 'Acme Technologies Private Limited',
-      F: 'Acme Trading Partners',
-      L: 'Acme Commerce LLP',
-      T: 'Acme Welfare Trust',
-      H: 'Sharma HUF',
-    };
-    const status: PanVerifyResult['status'] = invalid ? 'INVALID' : 'VALID';
-    return of({
-      ...envelope(),
-      pan: clean,
-      status,
-      registeredName: names[clean.charAt(3)] ?? 'Fetched Legal Entity',
-      panType: hint ?? 'unknown',
-    }).pipe(delay(800));
+  verifyPan(pan: string, name = ''): Observable<PanVerifyResult> {
+    return this.post<PanVerifyResult>({
+      action: 'check',
+      kind: 'pan',
+      pan: pan.toUpperCase(),
+      name,
+    });
   }
 
   lookupGstinsByPan(pan: string): Observable<GstinListResult> {
-    const clean = pan.toUpperCase();
-    const empty = clean.endsWith('1');
-    const legal =
-      clean.charAt(3) === 'P' ? 'Priya Sharma' : 'Acme Technologies Private Limited';
-    const gstins = empty
-      ? []
-      : [
-          { gstin: `29${clean}1Z5`, state: 'Karnataka', status: 'Active', legalName: legal },
-          { gstin: `27${clean}1Z2`, state: 'Maharashtra', status: 'Active', legalName: legal },
-        ];
-    return of({
-      ...envelope(),
-      pan: clean,
-      gstins,
-    }).pipe(delay(700));
+    return this.post<GstinListResult>({
+      action: 'check',
+      kind: 'pan_gstin_list',
+      pan: pan.toUpperCase(),
+    });
   }
 
   verifyGstin(gstin: string): Observable<GstinVerifyResult> {
-    const clean = gstin.toUpperCase();
-    const valid = !clean.endsWith('0');
-    return of({
-      ...envelope(),
-      gstin: clean,
-      valid,
-      legalName: valid ? 'Acme Technologies Private Limited' : '',
-      taxpayerType: 'Regular',
-      gstinStatus: valid ? 'Active' : 'Cancelled',
-    }).pipe(delay(850));
+    return this.post<GstinVerifyResult>({
+      action: 'check',
+      kind: 'gstin',
+      gstin: gstin.toUpperCase(),
+    });
   }
 
   verifyCin(cin: string): Observable<CinVerifyResult> {
-    const clean = cin.toUpperCase();
-    const valid = clean.length >= 8 && !clean.endsWith('0');
-    const status: CinVerifyResult['status'] = valid ? 'VALID' : 'INVALID';
-    return of({
-      ...envelope(),
-      cin: clean,
-      status,
-      companyName: valid ? 'Acme Technologies Private Limited' : '',
-      dateOfIncorporation: '2019-04-12',
-      companyStatus: valid ? 'Active' : 'Strike Off',
-    }).pipe(delay(850));
+    return this.post<CinVerifyResult>({
+      action: 'check',
+      kind: 'cin',
+      cin: cin.toUpperCase(),
+    });
   }
 
-  verifyBankAccount(accountNumber: string, holderName: string): Observable<BankVerifyResult> {
-    const mismatch = accountNumber.trim().endsWith('0');
-    const status: BankVerifyResult['status'] = mismatch ? 'mismatch' : 'matched';
-    return of({
-      ...envelope(),
+  verifyUdyam(udyam: string, ownerName = ''): Observable<UdyamVerifyResult> {
+    return this.post<UdyamVerifyResult>({
+      action: 'check',
+      kind: 'udyam',
+      udyam: udyam.toUpperCase(),
+      ownerName,
+    });
+  }
+
+  verifyBankAccount(accountNumber: string, holderName: string, ifsc = ''): Observable<BankVerifyResult> {
+    return this.post<BankVerifyResult>({
+      action: 'check',
+      kind: 'bank',
       accountNumber,
-      status,
-      matchedName: mismatch ? 'DOES NOT MATCH' : holderName,
-    }).pipe(delay(1100));
+      holderName,
+      name: holderName,
+      ifsc: ifsc.toUpperCase(),
+    });
   }
 
   verifyIfsc(code: string): Observable<IfscVerifyResult> {
-    const ifsc = code.toUpperCase();
-    const map: Record<string, { bankName: string; branch: string }> = {
-      HDFC0001234: { bankName: 'HDFC Bank', branch: 'Koramangala, Bengaluru' },
-      SBIN0000456: { bankName: 'State Bank of India', branch: 'Connaught Place, New Delhi' },
-      ICIC0000789: { bankName: 'ICICI Bank', branch: 'Bandra Kurla Complex, Mumbai' },
-    };
-    if (map[ifsc]) {
-      return of({ ifsc, ...map[ifsc] }).pipe(delay(450));
-    }
-    const prefix = ifsc.slice(0, 4);
-    const banks: Record<string, string> = {
-      HDFC: 'HDFC Bank',
-      SBIN: 'State Bank of India',
-      ICIC: 'ICICI Bank',
-      UTIB: 'Axis Bank',
-      KKBK: 'Kotak Mahindra Bank',
-      YESB: 'Yes Bank',
-    };
-    return of({
-      ifsc,
-      bankName: banks[prefix] ?? `${prefix} Bank`,
-      branch: 'Main branch',
-    }).pipe(delay(450));
+    return this.post<IfscVerifyResult>({
+      action: 'check',
+      kind: 'ifsc',
+      ifsc: code.toUpperCase(),
+    });
   }
-}
 
-function maskId(value: string): string {
-  if (value.length < 4) {
-    return 'XXXX';
+  verifyDigilockerAccount(mobile: string, pan: string): Observable<DigilockerAccountResult> {
+    return this.post<DigilockerAccountResult>({
+      action: 'check',
+      kind: 'digilocker_account',
+      mobile,
+      pan: pan.toUpperCase(),
+    });
   }
-  return `${'X'.repeat(value.length - 4)}${value.slice(-4)}`;
+
+  createDigilockerUrl(redirectUrl?: string): Observable<DigilockerUrlResult> {
+    const redirect =
+      redirectUrl ||
+      (typeof window !== 'undefined' && window.location.origin.startsWith('https://')
+        ? `${window.location.origin}/digilocker-return`
+        : '');
+    return this.post<DigilockerUrlResult>({
+      action: 'start',
+      kind: 'digilocker',
+      ...(redirect ? { redirectUrl: redirect } : {}),
+    });
+  }
+
+  getDigilockerStatus(verificationId: string, _pan?: string, _name?: string): Observable<DigilockerStatusResult> {
+    return this.post<DigilockerStatusResult>({
+      action: 'sync',
+      kind: 'digilocker',
+      verificationId,
+    });
+  }
+
+  /** Poll Cashfree until consent completes or times out (~2 min). */
+  pollDigilockerStatus(
+    verificationId: string,
+    pan?: string,
+    name?: string,
+    maxAttempts = 40,
+    intervalMs = 3000,
+  ): Observable<DigilockerStatusResult> {
+    return timer(0, intervalMs).pipe(
+      take(maxAttempts),
+      switchMap(() => this.getDigilockerStatus(verificationId, pan, name)),
+      takeWhile((status) => status.status === 'PENDING', true),
+      last(),
+      map((status) => {
+        if (status.status === 'PENDING') {
+          throw new Error(
+            'DigiLocker consent is still pending. Finish consent in the opened tab, then click verify again.',
+          );
+        }
+        return status;
+      }),
+    );
+  }
+
+  validateNameAlignment(): Observable<NameAlignmentResult> {
+    return this.post<NameAlignmentResult>({
+      action: 'validate',
+      kind: 'alignment',
+    });
+  }
+
+  getStatus(): Observable<{
+    kycStatus: string;
+    kybStatus: string;
+    bankStatus: string;
+    agreementStatus: string;
+    commercialStatus: string;
+    nameAlignment: NameAlignmentResult;
+  }> {
+    return this.api.get('/merchant/verification/');
+  }
 }

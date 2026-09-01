@@ -8,7 +8,7 @@ import { StatusChipComponent } from '../../../shared/ui/status-chip/status-chip.
 import { AuthService } from '../../../core/services/auth.service';
 import { OnboardingService } from '../../../core/services/onboarding.service';
 import { WorkspaceModeService } from '../../../core/services/workspace-mode.service';
-import { isLive, PARTNER_TYPE_LABELS } from '../../../core/models/onboarding.models';
+import { canAccessCommerce, isLive, PARTNER_TYPE_LABELS } from '../../../core/models/onboarding.models';
 import { AppShellComponent } from '../../../shared/ui/app-shell/app-shell.component';
 import { TPipe } from '../../../shared/pipes/t.pipe';
 
@@ -164,6 +164,24 @@ export class ConsoleLayoutComponent implements OnInit {
   });
 
   readonly groups = computed<NavGroup[]>(() => {
+    const app = this.onboarding.application();
+    const commerceUnlocked = canAccessCommerce(app);
+    const accountItems: NavItem[] = [
+      { path: '/app/account', label: 'KYC · KYB · Agreement', icon: 'verified_user', exact: false },
+    ];
+    if (commerceUnlocked) {
+      accountItems.push(
+        { path: '/app/business', label: 'Business', icon: 'apartment', exact: false },
+        { path: '/app/bank', label: 'Bank accounts', icon: 'account_balance', exact: false },
+        { path: '/app/documents', label: 'Documents', icon: 'folder', exact: false },
+      );
+    }
+    accountItems.push({ path: '/app/settings', label: 'Settings', icon: 'settings', exact: false });
+
+    if (!commerceUnlocked) {
+      return [{ label: 'Activation', items: accountItems }];
+    }
+
     return [
       {
         label: 'Commerce',
@@ -175,26 +193,28 @@ export class ConsoleLayoutComponent implements OnInit {
           { path: '/app/cards', label: 'Prepaid cards', icon: 'credit_card', exact: false },
         ],
       },
-      {
-        label: 'Account',
-        items: [
-          { path: '/app/account', label: 'KYC · KYB · Agreement', icon: 'verified_user', exact: false },
-          { path: '/app/business', label: 'Business', icon: 'apartment', exact: false },
-          { path: '/app/bank', label: 'Bank accounts', icon: 'account_balance', exact: false },
-          { path: '/app/documents', label: 'Documents', icon: 'folder', exact: false },
-          { path: '/app/settings', label: 'Settings', icon: 'settings', exact: false },
-        ],
-      },
+      { label: 'Account', items: accountItems },
     ];
   });
 
   get brandName(): string {
-    return this.onboarding.application()?.profile.brandName || this.auth.user()?.email || '';
+    const user = this.auth.user();
+    const brand = this.onboarding.application()?.profile.brandName;
+    if (brand) {
+      return brand;
+    }
+    if (user?.publicId) {
+      return `${user.publicId} · ${user.email}`;
+    }
+    return user?.email || '';
   }
 
   ngOnInit(): void {
-    this.onboarding.load().subscribe();
-    this.onboarding.loadOrders().subscribe();
+    this.onboarding.load().subscribe((app) => {
+      if (canAccessCommerce(app)) {
+        this.onboarding.loadOrders().subscribe();
+      }
+    });
     this.sync(this.router.url);
     this.router.events.pipe(filter((e) => e instanceof NavigationEnd)).subscribe((e) => {
       this.sync((e as NavigationEnd).urlAfterRedirects);

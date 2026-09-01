@@ -266,7 +266,7 @@ export class HomeComponent implements OnInit {
       return 'KYC and KYB approved. Sign the partner agreement next.';
     }
     if (app?.status === 'under_review') {
-      return 'Your KYC / KYB is with Payswap admin. Browse the catalog in test meanwhile.';
+      return 'Your KYC / KYB is with Payswap admin. Complete activation steps here — ordering unlocks after approval.';
     }
     if (!kycDone(app)) {
       return 'Verify KYC first, then choose your business type to continue onboarding.';

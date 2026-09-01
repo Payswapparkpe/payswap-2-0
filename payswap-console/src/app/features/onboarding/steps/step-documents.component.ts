@@ -11,7 +11,7 @@ import { FileDropzoneComponent } from '../../../shared/ui/file-dropzone/file-dro
   imports: [MatButtonModule, FileDropzoneComponent],
   template: `
     <p>
-      Remaining uploads for this entity (PDF, JPG, PNG, max 2 MB). Person scans are on KYC; business scans are on KYB.
+      Remaining uploads for this entity (PDF, JPG, PNG, max 2 MB). Business scans (MOA, AOA, BOR) are on KYB; person KYC is DigiLocker-only.
     </p>
     <div class="slots">
       @for (slot of slots; track slot.id) {
@@ -53,6 +53,7 @@ import { FileDropzoneComponent } from '../../../shared/ui/file-dropzone/file-dro
 })
 export class StepDocumentsComponent {
   @Input({ required: true }) application!: KycApplication;
+  @Input() readonly = false;
   @Output() save = new EventEmitter<KycApplication>();
 
   docs: UploadedDoc[] = [];

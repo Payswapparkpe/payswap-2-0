@@ -7,10 +7,10 @@ from .models import LoginEvent, User, UserSession
 @admin.register(User)
 class UserAdmin(ModelAdmin):
     ordering = ["email"]
-    list_display = ["email", "user_type", "is_staff", "is_active", "mfa_enforced"]
+    list_display = ["public_id", "email", "user_type", "is_staff", "is_active", "mfa_enforced"]
     list_filter = ["user_type", "is_staff", "is_active", "mfa_enforced"]
-    search_fields = ["email", "name", "mobile"]
-    readonly_fields = ["last_activity_at", "date_joined"]
+    search_fields = ["public_id", "email", "name", "mobile"]
+    readonly_fields = ["public_id", "last_activity_at", "date_joined"]
 
 
 @admin.register(UserSession)

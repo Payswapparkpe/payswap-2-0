@@ -1,19 +1,27 @@
 from django.urls import include, path
 
 from .agreements_api import AgreementDownloadView, AgreementView
-from .auth import AuthLoginView, AuthLogoutView, AuthMeView, AuthPasswordResetView, AuthRegisterView, AuthVerifyView
+from .auth import (
+    AuthConfigView,
+    AuthLoginView,
+    AuthLogoutView,
+    AuthMeView,
+    AuthPasswordResetView,
+    AuthRegisterView,
+    AuthVerifyView,
+)
 from .csrf import CsrfView
 from .onboarding import (
     OnboardingDocumentView,
     OnboardingPincodeView,
     OnboardingSubmitView,
     OnboardingView,
-    VerificationStartView,
-    VerificationStatusView,
 )
+from .verification_api import VerificationStartView, VerificationStatusView, VerificationView
 from .orders_api import CatalogQuoteView, CatalogView, OrderDetailView, OrderListCreateView
 
 merchant_urlpatterns = [
+    path("auth/config", AuthConfigView.as_view(), name="merchant_auth_config"),
     path("auth/register", AuthRegisterView.as_view(), name="merchant_auth_register"),
     path("auth/login", AuthLoginView.as_view(), name="merchant_auth_login"),
     path("auth/logout", AuthLogoutView.as_view(), name="merchant_auth_logout"),
@@ -24,6 +32,7 @@ merchant_urlpatterns = [
     path("onboarding/submit", OnboardingSubmitView.as_view(), name="merchant_onboarding_submit"),
     path("onboarding/pincode/", OnboardingPincodeView.as_view(), name="merchant_onboarding_pincode"),
     path("onboarding/documents/", OnboardingDocumentView.as_view(), name="merchant_onboarding_documents"),
+    path("verification/", VerificationView.as_view(), name="merchant_verification"),
     path("verification/start", VerificationStartView.as_view(), name="merchant_verification_start"),
     path("verification/status", VerificationStatusView.as_view(), name="merchant_verification_status"),
     path("agreements/", AgreementView.as_view(), name="merchant_agreements"),

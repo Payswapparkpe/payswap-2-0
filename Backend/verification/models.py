@@ -14,6 +14,13 @@ class Document(models.Model):
         AADHAAR = "AADHAAR", "Aadhaar"
         COI = "COI", "Certificate of Incorporation"
         BANK_PROOF = "BANK_PROOF", "Bank Proof"
+        MOA = "MOA", "Memorandum of Association"
+        AOA = "AOA", "Articles of Association"
+        BOARD_RESOLUTION = "BOARD_RESOLUTION", "Board Resolution"
+        AUTH_LETTER = "AUTH_LETTER", "Letter of Authority"
+        TRUSTEE_RESOLUTION = "TRUSTEE_RESOLUTION", "Trustee Resolution"
+        PARTNERSHIP_DEED = "PARTNERSHIP_DEED", "Partnership Deed"
+        TRUST_DEED = "TRUST_DEED", "Trust / Society Deed"
         OTHER = "OTHER", "Other"
 
     class Status(models.TextChoices):
@@ -26,6 +33,9 @@ class Document(models.Model):
     merchant = models.ForeignKey("merchants.Merchant", on_delete=models.CASCADE, related_name="documents")
     public_id = models.CharField(max_length=20, unique=True)
     doc_type = models.CharField(max_length=20, choices=DocType.choices)
+    # Wizard upload slot (e.g. "board_resolution", "auth_signatory_pan"). Several
+    # slots share one doc_type, so the reviewer and the wizard both need the slot.
+    slot_id = models.CharField(max_length=40, blank=True)
     file = models.FileField(upload_to="documents/%Y/%m/", blank=True)
     document_number_encrypted = models.TextField(blank=True)
     document_last4 = models.CharField(max_length=4, blank=True)
@@ -124,6 +134,7 @@ class VerificationRecord(models.Model):
         BANK_ACCOUNT = "BANK_ACCOUNT", "Bank account"
         IFSC = "IFSC", "IFSC"
         CIN = "CIN", "CIN"
+        UDYAM = "UDYAM", "Udyam"
         NAME_MATCH = "NAME_MATCH", "Name match"
         DIGILOCKER = "DIGILOCKER", "DigiLocker"
 

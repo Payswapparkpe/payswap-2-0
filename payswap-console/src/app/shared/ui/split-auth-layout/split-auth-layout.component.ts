@@ -1,6 +1,7 @@
-import { Component } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { LogoComponent } from '../logo/logo.component';
+import { OtpService } from '../../../core/services/otp.service';
 
 @Component({
   selector: 'app-split-auth-layout',
@@ -23,7 +24,7 @@ import { LogoComponent } from '../logo/logo.component';
             <li>Admin verifies partners and countersigns agreements</li>
           </ul>
         </div>
-        <p class="footnote">Demo OTP is always <strong>123456</strong>. No live DigiLocker or registry APIs.</p>
+        <p class="footnote">{{ otp.authFootnote() }}</p>
       </aside>
       <main class="panel">
         <ng-content />
@@ -148,4 +149,10 @@ import { LogoComponent } from '../logo/logo.component';
     `,
   ],
 })
-export class SplitAuthLayoutComponent {}
+export class SplitAuthLayoutComponent implements OnInit {
+  readonly otp = inject(OtpService);
+
+  ngOnInit(): void {
+    this.otp.loadConfig().subscribe();
+  }
+}

@@ -6,8 +6,9 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { DigilockerSnapshot, KycApplication, UploadedDoc } from '../../../core/models/onboarding.models';
 import { indianMobile as mobileValidator, pan as panValidator } from '../../../core/validators/india.validators';
-import { FileDropzoneComponent } from '../../../shared/ui/file-dropzone/file-dropzone.component';
 import { VerificationService } from '../../../core/services/verification.service';
+import { DigilockerSessionService } from '../../../core/services/digilocker-session.service';
+import { isVerificationLocked } from '../../../core/utils/verification-lock.util';
 import { nextOnboardingStep, prevOnboardingStep } from '../../../core/config/entity-rules';
 
 @Component({
@@ -19,7 +20,6 @@ import { nextOnboardingStep, prevOnboardingStep } from '../../../core/config/ent
     MatCheckboxModule,
     MatFormFieldModule,
     MatInputModule,
-    FileDropzoneComponent,
   ],
   template: `
     <form [formGroup]="form">
@@ -53,16 +53,18 @@ import { nextOnboardingStep, prevOnboardingStep } from '../../../core/config/ent
         <mat-checkbox formControlName="digiConsent">
           The owner allows Payswap to receive Aadhaar, PAN, and driving licence from DigiLocker
         </mat-checkbox>
-        <div class="row">
-          <button
-            mat-stroked-button
-            type="button"
-            (click)="startDigilocker()"
-            [disabled]="!form.controls.digiConsent.value || busy()"
-          >
-            {{ busy() ? lockerLabel() : lockerCta() }}
-          </button>
-        </div>
+        @if (!lockerLocked()) {
+          <div class="row">
+            <button
+              mat-stroked-button
+              type="button"
+              (click)="startDigilocker()"
+              [disabled]="!form.controls.digiConsent.value || busy()"
+            >
+              {{ busy() ? lockerLabel() : lockerCta() }}
+            </button>
+          </div>
+        }
         @if (snapshot(); as session) {
           <p class="ok">DigiLocker {{ session.status.toLowerCase().replace('_', ' ') }}.</p>
           @for (doc of session.documents; track doc.type) {
@@ -71,27 +73,8 @@ import { nextOnboardingStep, prevOnboardingStep } from '../../../core/config/ent
         }
       </div>
 
-      <div class="uploads">
-        <h4>Owner identity documents</h4>
-        <p>Upload colour scans of the owner’s documents. PDF, JPG, or PNG, max 2 MB.</p>
-        <app-file-dropzone
-          label="Owner PAN card"
-          hint="Personal PAN of the director, partner, or beneficial owner."
-          slotId="owner_pan"
-          [value]="doc('owner_pan')"
-          (valueChange)="setDoc($event, 'owner_pan')"
-        />
-        <app-file-dropzone
-          label="Owner photo ID"
-          hint="Aadhaar (masked), passport, voter ID, or driving licence."
-          slotId="owner_id"
-          [value]="doc('owner_id')"
-          (valueChange)="setDoc($event, 'owner_id')"
-        />
-      </div>
-
-      @if (verified()) {
-        <p class="ok">Business owner identity verified. Continue with entity KYB and the board resolution.</p>
+      @if (verified() && lockerLocked()) {
+        <p class="ok">Business owner identity verified via DigiLocker.</p>
       }
       @if (error()) {
         <p class="error" role="alert">{{ error() }}</p>
@@ -115,8 +98,7 @@ import { nextOnboardingStep, prevOnboardingStep } from '../../../core/config/ent
         grid-template-columns: 1fr 1fr;
         gap: 4px 16px;
       }
-      .panel,
-      .uploads {
+      .panel {
         display: grid;
         gap: 12px;
         padding: 16px;
@@ -156,8 +138,10 @@ import { nextOnboardingStep, prevOnboardingStep } from '../../../core/config/ent
 export class StepOwnerComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly verification = inject(VerificationService);
+  private readonly digilockerSession = inject(DigilockerSessionService);
 
   @Input({ required: true }) application!: KycApplication;
+  @Input() readonly = false;
   @Output() save = new EventEmitter<KycApplication>();
 
   readonly busy = signal(false);
@@ -175,6 +159,10 @@ export class StepOwnerComponent implements OnInit {
     digiConsent: [false],
   });
 
+  lockerLocked(): boolean {
+    return isVerificationLocked(this.verified(), this.application, 'owner');
+  }
+
   ngOnInit(): void {
     const s = this.application.ownerKyc;
     this.form.patchValue({
@@ -186,6 +174,23 @@ export class StepOwnerComponent implements OnInit {
     this.docs = [...s.docs];
     this.snapshot.set(s.digilocker ?? null);
     this.verified.set(s.verified);
+    this.applyFieldLocks();
+  }
+
+  private applyFieldLocks(): void {
+    if (this.readonly) {
+      this.form.disable({ emitEvent: false });
+      return;
+    }
+    const lock = this.lockerLocked();
+    (['name', 'pan', 'dob', 'mobile', 'digiConsent'] as const).forEach((field) => {
+      const control = this.form.get(field);
+      if (lock) {
+        control?.disable({ emitEvent: false });
+      } else {
+        control?.enable({ emitEvent: false });
+      }
+    });
   }
 
   lockerCta(): string {
@@ -221,39 +226,28 @@ export class StepOwnerComponent implements OnInit {
     const mobile = this.form.controls.mobile.value;
     const name = this.form.controls.name.value;
 
-    this.lockerLabel.set('Checking DigiLocker account…');
-    this.verification.verifyDigilockerAccount(mobile, pan).subscribe((account) => {
-      if (account.status === 'ACCOUNT_NOT_FOUND') {
+    this.lockerLabel.set('Opening DigiLocker…');
+    this.digilockerSession.run({ mobile, pan, name }).subscribe({
+      next: (status) => {
         this.busy.set(false);
-        this.snapshot.set(null);
-        this.verified.set(false);
-        this.error.set('No DigiLocker account for this mobile / PAN. Demo: avoid PAN ending in 9.');
-        return;
-      }
-      this.lockerLabel.set('Opening consent…');
-      this.verification.createDigilockerUrl(account.verificationId).subscribe((url) => {
-        this.snapshot.set({
-          verificationId: url.verificationId,
-          referenceId: url.referenceId,
-          status: url.status,
-          documents: [],
-        });
-        this.lockerLabel.set('Fetching documents…');
-        this.verification.getDigilockerStatus(url.verificationId, pan, name).subscribe((status) => {
-          this.busy.set(false);
-          this.snapshot.set(status);
-          if (status.status !== 'AUTHENTICATED') {
-            this.verified.set(false);
-            this.error.set('DigiLocker consent was not completed.');
-            return;
-          }
-          const panDoc = status.documents.find((d) => d.type === 'PAN');
-          if (panDoc?.name) {
-            this.form.controls.name.setValue(panDoc.name);
-          }
-          this.syncVerified();
-        });
-      });
+        this.snapshot.set(status);
+        if (status.status !== 'AUTHENTICATED') {
+          this.verified.set(false);
+          this.error.set('DigiLocker verification did not complete.');
+          return;
+        }
+        const idDoc =
+          status.documents.find((d) => d.type === 'PAN') ?? status.documents.find((d) => d.type === 'AADHAAR');
+        const verifiedName = status.userDetails?.name || idDoc?.name;
+        if (verifiedName) {
+          this.form.controls.name.setValue(verifiedName);
+        }
+        this.syncVerified();
+      },
+      error: (err: Error) => {
+        this.busy.set(false);
+        this.error.set(err.message || 'DigiLocker verification failed.');
+      },
     });
   }
 
@@ -284,13 +278,11 @@ export class StepOwnerComponent implements OnInit {
 
   private syncVerified(): void {
     const lockerOk = this.snapshot()?.status === 'AUTHENTICATED';
-    const filesOk = !!this.doc('owner_pan') && !!this.doc('owner_id');
-    this.verified.set(!!lockerOk && filesOk);
-    if (lockerOk && !filesOk) {
-      this.error.set('Upload the owner PAN and a photo ID to finish owner KYC.');
-    } else if (this.verified()) {
+    this.verified.set(!!lockerOk);
+    if (this.verified()) {
       this.error.set('');
     }
+    this.applyFieldLocks();
   }
 
   private payload(): KycApplication {

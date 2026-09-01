@@ -10,6 +10,11 @@ export interface EntityOnboardingRules {
   needsLlpin: boolean;
   needsDoi: boolean;
   needsBusinessPan: boolean;
+  /** Registered office comes from CIN; otherwise user enters manually on KYB. */
+  addressFromCin: boolean;
+  needsUdyam: boolean;
+  /** Partnership / NGO: manual partner-trustee list + optional deed OCR. */
+  needsPartnerRegistry: boolean;
   gst: GstMode;
   needsUbo: boolean;
   uboThreshold: number;
@@ -19,7 +24,7 @@ export interface EntityOnboardingRules {
   businessPanLabel: string;
   bankHolderHint: string;
   bankMatches: BankMatches;
-  allowedAccountType: AllowedAccountType;
+  allowedAccountTypes: AllowedAccountType[];
 }
 
 export const ENTITY_RULES: Record<EntityType, EntityOnboardingRules> = {
@@ -29,6 +34,9 @@ export const ENTITY_RULES: Record<EntityType, EntityOnboardingRules> = {
     needsLlpin: false,
     needsDoi: false,
     needsBusinessPan: false,
+    addressFromCin: false,
+    needsUdyam: true,
+    needsPartnerRegistry: false,
     gst: 'hidden',
     needsUbo: false,
     uboThreshold: 10,
@@ -36,9 +44,9 @@ export const ENTITY_RULES: Record<EntityType, EntityOnboardingRules> = {
     needsAuthorisationInstrument: false,
     lightProfile: true,
     businessPanLabel: '',
-    bankHolderHint: 'Account holder name must match the entity name on the savings account (the verified individual).',
+    bankHolderHint: 'Account holder name must match the verified individual — savings or current account.',
     bankMatches: 'person',
-    allowedAccountType: 'savings',
+    allowedAccountTypes: ['current', 'savings'],
   },
   proprietorship: {
     needsKybStep: true,
@@ -46,6 +54,9 @@ export const ENTITY_RULES: Record<EntityType, EntityOnboardingRules> = {
     needsLlpin: false,
     needsDoi: false,
     needsBusinessPan: false,
+    addressFromCin: false,
+    needsUdyam: false,
+    needsPartnerRegistry: false,
     gst: 'optional',
     needsUbo: false,
     uboThreshold: 10,
@@ -55,7 +66,7 @@ export const ENTITY_RULES: Record<EntityType, EntityOnboardingRules> = {
     businessPanLabel: '',
     bankHolderHint: 'Current account only. Account holder name must match the entity legal name.',
     bankMatches: 'entity',
-    allowedAccountType: 'current',
+    allowedAccountTypes: ['current'],
   },
   partnership: {
     needsKybStep: true,
@@ -63,6 +74,9 @@ export const ENTITY_RULES: Record<EntityType, EntityOnboardingRules> = {
     needsLlpin: false,
     needsDoi: true,
     needsBusinessPan: true,
+    addressFromCin: false,
+    needsUdyam: false,
+    needsPartnerRegistry: true,
     gst: 'optional',
     needsUbo: true,
     uboThreshold: 10,
@@ -72,7 +86,7 @@ export const ENTITY_RULES: Record<EntityType, EntityOnboardingRules> = {
     businessPanLabel: 'Partnership firm PAN',
     bankHolderHint: 'Current account only. Account holder name must match the entity legal name.',
     bankMatches: 'entity',
-    allowedAccountType: 'current',
+    allowedAccountTypes: ['current'],
   },
   llp: {
     needsKybStep: true,
@@ -80,6 +94,9 @@ export const ENTITY_RULES: Record<EntityType, EntityOnboardingRules> = {
     needsLlpin: true,
     needsDoi: true,
     needsBusinessPan: false,
+    addressFromCin: false,
+    needsUdyam: false,
+    needsPartnerRegistry: false,
     gst: 'optional',
     needsUbo: true,
     uboThreshold: 10,
@@ -89,7 +106,7 @@ export const ENTITY_RULES: Record<EntityType, EntityOnboardingRules> = {
     businessPanLabel: '',
     bankHolderHint: 'Current account only. Account holder name must match the entity legal name.',
     bankMatches: 'entity',
-    allowedAccountType: 'current',
+    allowedAccountTypes: ['current'],
   },
   private_limited: {
     needsKybStep: true,
@@ -97,6 +114,9 @@ export const ENTITY_RULES: Record<EntityType, EntityOnboardingRules> = {
     needsLlpin: false,
     needsDoi: true,
     needsBusinessPan: true,
+    addressFromCin: true,
+    needsUdyam: false,
+    needsPartnerRegistry: false,
     gst: 'optional',
     needsUbo: true,
     uboThreshold: 10,
@@ -106,7 +126,7 @@ export const ENTITY_RULES: Record<EntityType, EntityOnboardingRules> = {
     businessPanLabel: 'Company PAN',
     bankHolderHint: 'Current account only. Account holder name must match the entity legal name.',
     bankMatches: 'entity',
-    allowedAccountType: 'current',
+    allowedAccountTypes: ['current'],
   },
   public_limited: {
     needsKybStep: true,
@@ -114,6 +134,9 @@ export const ENTITY_RULES: Record<EntityType, EntityOnboardingRules> = {
     needsLlpin: false,
     needsDoi: true,
     needsBusinessPan: true,
+    addressFromCin: true,
+    needsUdyam: false,
+    needsPartnerRegistry: false,
     gst: 'optional',
     needsUbo: true,
     uboThreshold: 10,
@@ -123,7 +146,7 @@ export const ENTITY_RULES: Record<EntityType, EntityOnboardingRules> = {
     businessPanLabel: 'Company PAN',
     bankHolderHint: 'Current account only. Account holder name must match the entity legal name.',
     bankMatches: 'entity',
-    allowedAccountType: 'current',
+    allowedAccountTypes: ['current'],
   },
   opc: {
     needsKybStep: true,
@@ -131,6 +154,9 @@ export const ENTITY_RULES: Record<EntityType, EntityOnboardingRules> = {
     needsLlpin: false,
     needsDoi: true,
     needsBusinessPan: false,
+    addressFromCin: true,
+    needsUdyam: false,
+    needsPartnerRegistry: false,
     gst: 'optional',
     needsUbo: true,
     uboThreshold: 10,
@@ -140,7 +166,7 @@ export const ENTITY_RULES: Record<EntityType, EntityOnboardingRules> = {
     businessPanLabel: '',
     bankHolderHint: 'Current account only. Account holder name must match the entity legal name.',
     bankMatches: 'entity',
-    allowedAccountType: 'current',
+    allowedAccountTypes: ['current'],
   },
   trust_society_ngo: {
     needsKybStep: true,
@@ -148,6 +174,9 @@ export const ENTITY_RULES: Record<EntityType, EntityOnboardingRules> = {
     needsLlpin: false,
     needsDoi: true,
     needsBusinessPan: false,
+    addressFromCin: false,
+    needsUdyam: false,
+    needsPartnerRegistry: true,
     gst: 'optional',
     needsUbo: true,
     uboThreshold: 15,
@@ -157,7 +186,7 @@ export const ENTITY_RULES: Record<EntityType, EntityOnboardingRules> = {
     businessPanLabel: '',
     bankHolderHint: 'Current account only. Account holder name must match the entity legal name.',
     bankMatches: 'entity',
-    allowedAccountType: 'current',
+    allowedAccountTypes: ['current'],
   },
   huf: {
     needsKybStep: true,
@@ -165,6 +194,9 @@ export const ENTITY_RULES: Record<EntityType, EntityOnboardingRules> = {
     needsLlpin: false,
     needsDoi: false,
     needsBusinessPan: false,
+    addressFromCin: false,
+    needsUdyam: false,
+    needsPartnerRegistry: false,
     gst: 'optional',
     needsUbo: false,
     uboThreshold: 10,
@@ -174,7 +206,7 @@ export const ENTITY_RULES: Record<EntityType, EntityOnboardingRules> = {
     businessPanLabel: '',
     bankHolderHint: 'Current account only. Account holder name must match the entity legal name.',
     bankMatches: 'entity',
-    allowedAccountType: 'current',
+    allowedAccountTypes: ['current'],
   },
 };
 
@@ -185,6 +217,7 @@ export function rulesFor(entityType: EntityType | ''): EntityOnboardingRules | n
 export const CANONICAL_ONBOARDING_STEPS: { id: OnboardingStep; label: string }[] = [
   { id: 'signatory', label: 'KYC' },
   { id: 'profile', label: 'Business' },
+  { id: 'auth_signatory', label: 'Auth signatory KYC' },
   { id: 'owner', label: 'Owner KYC' },
   { id: 'identity', label: 'KYB' },
   { id: 'ubo', label: 'Owners' },
@@ -193,15 +226,43 @@ export const CANONICAL_ONBOARDING_STEPS: { id: OnboardingStep; label: string }[]
   { id: 'review', label: 'Review' },
 ];
 
+const DIRECTOR_RELATIONS = new Set([
+  'director',
+  'managing_director',
+  'whole_time_director',
+  'designated_partner',
+  'partner',
+  'trustee',
+  'karta',
+  'proprietor',
+]);
+
+export function isDirectorRelation(relation: string): boolean {
+  return DIRECTOR_RELATIONS.has(relation);
+}
+
+export function needsAuthSignatoryPersonKyc(app: KycApplication): boolean {
+  return app.kycPersonIsAuthorisedSignatory === false;
+}
+
+/** Opener holds a directorship/partnership role — KYB needs auth instrument, not repeat opener KYC. */
+export function openerIsPrincipal(app: KycApplication): boolean {
+  return isDirectorRelation(app.signatoryRelation) && app.kycPersonIsAuthorisedSignatory !== false;
+}
+
 export function stepsForEntity(
   entityType: EntityType | '',
   signatoryIsOwner: boolean | null = null,
+  kycPersonIsAuthorisedSignatory: boolean | null = null,
 ): { id: OnboardingStep; label: string }[] {
   if (!entityType) {
     return CANONICAL_ONBOARDING_STEPS.filter((step) => step.id === 'signatory' || step.id === 'profile');
   }
   const rules = ENTITY_RULES[entityType];
   return CANONICAL_ONBOARDING_STEPS.filter((step) => {
+    if (step.id === 'auth_signatory') {
+      return kycPersonIsAuthorisedSignatory === false;
+    }
     if (step.id === 'owner') {
       return rules.canSignatoryDifferFromOwner && signatoryIsOwner === false;
     }
@@ -215,12 +276,26 @@ export function stepsForEntity(
   });
 }
 
+export function stepsForApplication(app: KycApplication): { id: OnboardingStep; label: string }[] {
+  return stepsForEntity(app.profile.entityType, app.signatoryIsOwner, app.kycPersonIsAuthorisedSignatory);
+}
+
+export function onboardingNav(app: KycApplication) {
+  return {
+    next: (from: OnboardingStep) =>
+      nextOnboardingStep(from, app.profile.entityType, app.signatoryIsOwner, app.kycPersonIsAuthorisedSignatory),
+    prev: (from: OnboardingStep) =>
+      prevOnboardingStep(from, app.profile.entityType, app.signatoryIsOwner, app.kycPersonIsAuthorisedSignatory),
+  };
+}
+
 export function nextOnboardingStep(
   from: OnboardingStep,
   entityType: EntityType | '',
   signatoryIsOwner: boolean | null = null,
+  kycPersonIsAuthorisedSignatory: boolean | null = null,
 ): OnboardingStep {
-  const steps = stepsForEntity(entityType, signatoryIsOwner);
+  const steps = stepsForEntity(entityType, signatoryIsOwner, kycPersonIsAuthorisedSignatory);
   const index = steps.findIndex((step) => step.id === from);
   if (index < 0) {
     return steps[0]?.id ?? 'signatory';
@@ -232,8 +307,9 @@ export function prevOnboardingStep(
   from: OnboardingStep,
   entityType: EntityType | '',
   signatoryIsOwner: boolean | null = null,
+  kycPersonIsAuthorisedSignatory: boolean | null = null,
 ): OnboardingStep {
-  const steps = stepsForEntity(entityType, signatoryIsOwner);
+  const steps = stepsForEntity(entityType, signatoryIsOwner, kycPersonIsAuthorisedSignatory);
   const index = steps.findIndex((step) => step.id === from);
   if (index <= 0) {
     return steps[0]?.id ?? 'signatory';
@@ -241,8 +317,17 @@ export function prevOnboardingStep(
   return steps[index - 1].id;
 }
 
+export function allowedAccountTypes(entityType: EntityType | ''): AllowedAccountType[] {
+  return rulesFor(entityType)?.allowedAccountTypes ?? ['current'];
+}
+
+/** Default account type when the entity allows only one option. */
 export function allowedAccountType(entityType: EntityType | ''): AllowedAccountType {
-  return rulesFor(entityType)?.allowedAccountType ?? 'current';
+  return allowedAccountTypes(entityType)[0] ?? 'current';
+}
+
+export function isAllowedAccountType(entityType: EntityType | '', type: AllowedAccountType): boolean {
+  return allowedAccountTypes(entityType).includes(type);
 }
 
 export function requiresUbo(entityType: EntityType | ''): boolean {
@@ -283,7 +368,9 @@ export function enforcePersonaKycFirst(app: KycApplication): KycApplication {
   if (!app.signatory.verified) {
     return app.currentStep === 'signatory' ? app : { ...app, currentStep: 'signatory' };
   }
-  const allowed = stepsForEntity(app.profile.entityType, app.signatoryIsOwner).map((step) => step.id);
+  const allowed = stepsForEntity(app.profile.entityType, app.signatoryIsOwner, app.kycPersonIsAuthorisedSignatory).map(
+    (step) => step.id,
+  );
   if (allowed.includes(app.currentStep)) {
     return app;
   }

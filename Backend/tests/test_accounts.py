@@ -44,6 +44,15 @@ class TestUserModel:
         assert user.password != "CorrectHorse9!"
         assert user.check_password("CorrectHorse9!")
 
+    def test_public_id_assigned_on_create(self):
+        User = get_user_model()
+        user = User.objects.create_user(
+            email="public@business.test",
+            password="CorrectHorse9!",
+            user_type="MERCHANT",
+        )
+        assert user.public_id.startswith("PSU-")
+
     def test_display_name_and_initials(self):
         User = get_user_model()
         named = User.objects.create_user(

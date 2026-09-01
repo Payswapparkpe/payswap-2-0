@@ -172,7 +172,6 @@ export class RegisterComponent {
       error: (err: Error) => {
         this.loading.set(false);
         this.error.set(err.message);
-        this.notify.error(err.message);
       },
     });
   }

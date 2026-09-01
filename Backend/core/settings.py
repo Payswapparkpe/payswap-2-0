@@ -13,6 +13,7 @@ APP_ENV = config("APP_ENV", default="development")
 ALLOWED_HOSTS = config("ALLOWED_HOSTS", cast=Csv())
 PUBLIC_BASE_URL = config("PUBLIC_BASE_URL").rstrip("/")
 PUBLIC_CONSOLE_URL = config("PUBLIC_CONSOLE_URL", default="http://localhost:4200").rstrip("/")
+CASHFREE_DIGILOCKER_REDIRECT_URL = config("CASHFREE_DIGILOCKER_REDIRECT_URL", default="").strip()
 TIME_ZONE = config("TIME_ZONE", default="Asia/Kolkata")
 CSRF_TRUSTED_ORIGINS = config("CSRF_TRUSTED_ORIGINS", cast=Csv())
 ADMIN_URL = config("ADMIN_URL", default="admin/").strip("/") + "/"
@@ -136,6 +137,7 @@ TEMPLATES = [
 ]
 
 _db_engine = config("DB_ENGINE")
+_db_conn_max_age = config("DB_CONN_MAX_AGE", default=60 if IS_PRODUCTION else 0, cast=int)
 DATABASES = {
     "default": {
         "ENGINE": _db_engine,
@@ -144,12 +146,17 @@ DATABASES = {
         "PASSWORD": config("DB_PASSWORD"),
         "HOST": config("DB_HOST"),
         "PORT": config("DB_PORT"),
-        "CONN_MAX_AGE": 60,
-        "CONN_HEALTH_CHECKS": True,
+        # Persistent connections in dev exhaust local Postgres (runserver reload +
+        # DigiLocker polling). Override with DB_CONN_MAX_AGE if needed.
+        "CONN_MAX_AGE": _db_conn_max_age,
+        "CONN_HEALTH_CHECKS": _db_conn_max_age > 0,
         # connect_timeout is libpq-only; SQLite rejects unknown options.
         "OPTIONS": {"connect_timeout": 10} if "postgresql" in _db_engine else {},
     }
 }
+
+if DEBUG and "postgresql" in _db_engine:
+    MIDDLEWARE = [*MIDDLEWARE, "core.middleware.CloseDatabaseConnectionsMiddleware"]
 
 REDIS_URL = config("REDIS_URL")
 
@@ -221,12 +228,15 @@ EMAIL_USE_TLS = config("EMAIL_USE_TLS", default=True, cast=bool)
 EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
 EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
 DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL")
+OTP_FROM_EMAIL = config("OTP_FROM_EMAIL", default="Payswap <support@payswap.in>")
+OTP_REPLY_TO_EMAIL = config("OTP_REPLY_TO_EMAIL", default="support@payswap.in")
 AWS_SES_REGION = config("AWS_SES_REGION", default="ap-south-1")
 AWS_SES_ACCESS_KEY_ID = config("AWS_SES_ACCESS_KEY_ID", default="")
 AWS_SES_SECRET_ACCESS_KEY = config("AWS_SES_SECRET_ACCESS_KEY", default="")
 KALEYRA_SID = config("KALEYRA_SID", default="") or config("KALEYRA_ACCOUNT_SID", default="")
 KALEYRA_API_KEY = config("KALEYRA_API_KEY", default="")
-KALEYRA_SENDER = config("KALEYRA_SENDER", default="")
+KALEYRA_API_KEY_NAME = config("KALEYRA_API_KEY_NAME", default="")
+KALEYRA_SENDER = config("KALEYRA_SENDER", default="") or config("KALEYRA_SENDER_ID", default="PYSWAP")
 KALEYRA_BASE_URL = config("KALEYRA_BASE_URL", default="https://api.in.kaleyra.io")
 KALEYRA_ENTITY_ID = config("KALEYRA_ENTITY_ID", default="")
 KALEYRA_WEBHOOK_SECRET = config("KALEYRA_WEBHOOK_SECRET", default="")
@@ -244,6 +254,12 @@ KALEYRA_DLT_TEMPLATES = _json_object(config("KALEYRA_DLT_TEMPLATES", default="{}
 CASHFREE_CLIENT_ID = config("CASHFREE_CLIENT_ID", default="")
 CASHFREE_CLIENT_SECRET = config("CASHFREE_CLIENT_SECRET", default="")
 CASHFREE_ENV = config("CASHFREE_ENV", default="sandbox")
+CASHFREE_PUBLIC_KEY_PATH = config(
+    "CASHFREE_PUBLIC_KEY_PATH",
+    default=str(BASE_DIR / "Cashfree key" / "accountId_59940_public_key.pem"),
+)
+if not Path(CASHFREE_PUBLIC_KEY_PATH).is_absolute():
+    CASHFREE_PUBLIC_KEY_PATH = str(BASE_DIR / CASHFREE_PUBLIC_KEY_PATH)
 # Separate credential for inbound webhooks (x-webhook-signature HMAC). Empty =
 # receiver refuses all events (fail closed).
 CASHFREE_WEBHOOK_SECRET = config("CASHFREE_WEBHOOK_SECRET", default="")

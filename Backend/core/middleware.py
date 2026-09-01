@@ -3,6 +3,7 @@ from datetime import datetime
 
 from django.conf import settings
 from django.contrib import messages
+from django.db import close_old_connections, connections
 from django.contrib.auth import logout
 from django.http import HttpResponseForbidden
 from django.shortcuts import redirect
@@ -112,6 +113,20 @@ class RevokedSessionMiddleware:
         ):
             logout(request)
         return self.get_response(request)
+
+
+class CloseDatabaseConnectionsMiddleware:
+    """Release PostgreSQL connections after each request in local development."""
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        close_old_connections()
+        try:
+            return self.get_response(request)
+        finally:
+            connections.close_all()
 
 
 class AdminAccessMiddleware:

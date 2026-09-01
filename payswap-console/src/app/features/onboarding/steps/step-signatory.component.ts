@@ -8,8 +8,9 @@ import { MatSelectModule } from '@angular/material/select';
 import { DigilockerSnapshot, ENTITY_LABELS, EntityType, KycApplication, UploadedDoc } from '../../../core/models/onboarding.models';
 import { relationsFor } from '../../../core/config/signatory-relations';
 import { indianMobile as mobileValidator, pan as panValidator } from '../../../core/validators/india.validators';
-import { FileDropzoneComponent } from '../../../shared/ui/file-dropzone/file-dropzone.component';
 import { VerificationService } from '../../../core/services/verification.service';
+import { DigilockerSessionService } from '../../../core/services/digilocker-session.service';
+import { isVerificationLocked } from '../../../core/utils/verification-lock.util';
 
 @Component({
   selector: 'app-step-signatory',
@@ -21,13 +22,13 @@ import { VerificationService } from '../../../core/services/verification.service
     MatInputModule,
     MatCheckboxModule,
     MatSelectModule,
-    FileDropzoneComponent,
   ],
   template: `
     <form [formGroup]="form">
       <p class="lede">
         Select the entity type first. Confirm whether you are the authorised signatory, then complete
-        person KYC. Payswap admin approves KYC and KYB after you submit.
+        DigiLocker KYC for the person opening this account. If you are also a director or owner, this same
+        verification will count on the KYB step — you will not verify twice.
       </p>
       <mat-form-field appearance="outline" class="full">
         <mat-label>Entity type</mat-label>
@@ -57,8 +58,8 @@ import { VerificationService } from '../../../core/services/verification.service
               <input matInput formControlName="authorisedSignatoryName" />
             </mat-form-field>
             <p class="note">
-              Complete your own KYC below. The authorised signatory named here is recorded on the
-              file for admin review, together with the board resolution appointing them.
+              Complete your own KYC below. On the next step you will verify the authorised signatory’s
+              Aadhaar and PAN, plus upload the board resolution or letter of authority.
             </p>
           }
         </div>
@@ -86,20 +87,22 @@ import { VerificationService } from '../../../core/services/verification.service
 
       <div class="panel">
         <h4>DigiLocker</h4>
-        <p>Consent-based fetch of Aadhaar, PAN, and driving licence. Demo: PAN ending in 9 has no DigiLocker account.</p>
+        <p>Consent-based fetch of Aadhaar, PAN, and driving licence from Cashfree DigiLocker.</p>
         <mat-checkbox formControlName="digiConsent">
           I allow Payswap to receive Aadhaar, PAN, and driving licence from DigiLocker for KYC
         </mat-checkbox>
-        <div class="row">
-          <button
-            mat-stroked-button
-            type="button"
-            (click)="startDigilocker()"
-            [disabled]="!form.controls.digiConsent.value || busy()"
-          >
-            {{ busy() ? lockerLabel() : lockerCta() }}
-          </button>
-        </div>
+        @if (!lockerLocked()) {
+          <div class="row">
+            <button
+              mat-stroked-button
+              type="button"
+              (click)="startDigilocker()"
+              [disabled]="!form.controls.digiConsent.value || busy()"
+            >
+              {{ busy() ? lockerLabel() : lockerCta() }}
+            </button>
+          </div>
+        }
         @if (snapshot(); as session) {
           <p class="ok">DigiLocker {{ session.status.toLowerCase().replace('_', ' ') }}.</p>
           @for (doc of session.documents; track doc.type) {
@@ -108,27 +111,8 @@ import { VerificationService } from '../../../core/services/verification.service
         }
       </div>
 
-      <div class="uploads">
-        <h4>Physical documents</h4>
-        <p>Upload clear colour scans even after DigiLocker succeeds. PDF, JPG, or PNG, max 2 MB.</p>
-        <app-file-dropzone
-          label="PAN card"
-          hint="Physical PAN card, both sides if needed."
-          slotId="signatory_pan"
-          [value]="doc('signatory_pan')"
-          (valueChange)="setDoc($event, 'signatory_pan')"
-        />
-        <app-file-dropzone
-          label="Aadhaar / Passport / Voter ID / Driving licence"
-          hint="Photo identity with address. Mask Aadhaar if sharing a scan."
-          slotId="signatory_id"
-          [value]="doc('signatory_id')"
-          (valueChange)="setDoc($event, 'signatory_id')"
-        />
-      </div>
-
-      @if (verified()) {
-        <p class="ok">Identity verified via DigiLocker and physical documents.</p>
+      @if (verified() && lockerLocked()) {
+        <p class="ok">Identity verified via DigiLocker.</p>
       }
       @if (error()) {
         <p class="error" role="alert">{{ error() }}</p>
@@ -160,8 +144,7 @@ import { VerificationService } from '../../../core/services/verification.service
         grid-template-columns: 1fr 1fr;
         gap: 4px 16px;
       }
-      .panel,
-      .uploads {
+      .panel {
         display: grid;
         gap: 12px;
         padding: 16px;
@@ -201,8 +184,10 @@ import { VerificationService } from '../../../core/services/verification.service
 export class StepSignatoryComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly verification = inject(VerificationService);
+  private readonly digilockerSession = inject(DigilockerSessionService);
 
   @Input({ required: true }) application!: KycApplication;
+  @Input() readonly = false;
   @Output() save = new EventEmitter<KycApplication>();
 
   readonly busy = signal(false);
@@ -234,6 +219,10 @@ export class StepSignatoryComponent implements OnInit {
     return relationsFor(this.form.controls.entityType.value);
   }
 
+  lockerLocked(): boolean {
+    return isVerificationLocked(this.verified(), this.application, 'signatory');
+  }
+
   ngOnInit(): void {
     const s = this.application.signatory;
     this.form.patchValue({
@@ -249,6 +238,23 @@ export class StepSignatoryComponent implements OnInit {
     this.docs = [...s.docs];
     this.snapshot.set(s.digilocker ?? null);
     this.verified.set(s.verified);
+    this.applyFieldLocks();
+  }
+
+  private applyFieldLocks(): void {
+    if (this.readonly) {
+      this.form.disable({ emitEvent: false });
+      return;
+    }
+    const lock = this.lockerLocked();
+    (['name', 'pan', 'dob', 'mobile', 'digiConsent'] as const).forEach((field) => {
+      const control = this.form.get(field);
+      if (lock) {
+        control?.disable({ emitEvent: false });
+      } else {
+        control?.enable({ emitEvent: false });
+      }
+    });
   }
 
   onEntityChange(): void {
@@ -303,40 +309,29 @@ export class StepSignatoryComponent implements OnInit {
     const mobile = this.form.controls.mobile.value;
     const name = this.form.controls.name.value;
 
-    this.lockerLabel.set('Checking DigiLocker account…');
-    this.verification.verifyDigilockerAccount(mobile, pan).subscribe((account) => {
-      if (account.status === 'ACCOUNT_NOT_FOUND') {
+    this.lockerLabel.set('Opening DigiLocker…');
+    this.digilockerSession.run({ mobile, pan, name }).subscribe({
+      next: (status) => {
         this.busy.set(false);
-        this.snapshot.set(null);
-        this.verified.set(false);
-        this.error.set('No DigiLocker account for this mobile / PAN. Demo: avoid PAN ending in 9.');
-        return;
-      }
-      this.verificationId = account.verificationId;
-      this.lockerLabel.set('Opening consent…');
-      this.verification.createDigilockerUrl(account.verificationId).subscribe((url) => {
-        this.snapshot.set({
-          verificationId: url.verificationId,
-          referenceId: url.referenceId,
-          status: url.status,
-          documents: [],
-        });
-        this.lockerLabel.set('Fetching documents…');
-        this.verification.getDigilockerStatus(url.verificationId, pan, name).subscribe((status) => {
-          this.busy.set(false);
-          this.snapshot.set(status);
-          if (status.status !== 'AUTHENTICATED') {
-            this.verified.set(false);
-            this.error.set('DigiLocker consent was not completed.');
-            return;
-          }
-          const panDoc = status.documents.find((d) => d.type === 'PAN');
-          if (panDoc?.name) {
-            this.form.controls.name.setValue(panDoc.name);
-          }
-          this.syncVerified();
-        });
-      });
+        this.verificationId = status.verificationId;
+        this.snapshot.set(status);
+        if (status.status !== 'AUTHENTICATED') {
+          this.verified.set(false);
+          this.error.set('DigiLocker verification did not complete.');
+          return;
+        }
+        const idDoc =
+          status.documents.find((d) => d.type === 'PAN') ?? status.documents.find((d) => d.type === 'AADHAAR');
+        const verifiedName = status.userDetails?.name || idDoc?.name;
+        if (verifiedName) {
+          this.form.controls.name.setValue(verifiedName);
+        }
+        this.syncVerified();
+      },
+      error: (err: Error) => {
+        this.busy.set(false);
+        this.error.set(err.message || 'DigiLocker verification failed.');
+      },
     });
   }
 
@@ -363,13 +358,11 @@ export class StepSignatoryComponent implements OnInit {
 
   private syncVerified(): void {
     const lockerOk = this.snapshot()?.status === 'AUTHENTICATED';
-    const filesOk = !!this.doc('signatory_pan') && !!this.doc('signatory_id');
-    this.verified.set(!!lockerOk && filesOk);
-    if (lockerOk && !filesOk) {
-      this.error.set('Upload PAN and a photo ID to finish KYC.');
-    } else if (this.verified()) {
+    this.verified.set(!!lockerOk);
+    if (this.verified()) {
       this.error.set('');
     }
+    this.applyFieldLocks();
   }
 
   private payload(): KycApplication {

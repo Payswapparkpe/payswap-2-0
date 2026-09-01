@@ -20,8 +20,9 @@
     </aside>
     <section class="card">
         <div class="tabs" role="tablist" aria-label="Merchant sections">
-            <a class="tab" href="?tab=overview" {% if tab != "documents" and tab != "orders" and tab != "agreements" and tab != "audit" %}aria-current="page"{% endif %}>Overview</a>
+            <a class="tab" href="?tab=overview" {% if tab != "documents" and tab != "verification" and tab != "orders" and tab != "agreements" and tab != "audit" %}aria-current="page"{% endif %}>Overview</a>
             <a class="tab" href="?tab=documents" {% if tab == "documents" %}aria-current="page"{% endif %}>Documents</a>
+            <a class="tab" href="?tab=verification" {% if tab == "verification" %}aria-current="page"{% endif %}>Verification</a>
             <a class="tab" href="?tab=orders" {% if tab == "orders" %}aria-current="page"{% endif %}>Orders</a>
             <a class="tab" href="?tab=agreements" {% if tab == "agreements" %}aria-current="page"{% endif %}>Agreement</a>
             <a class="tab" href="?tab=audit" {% if tab == "audit" %}aria-current="page"{% endif %}>Audit</a>
@@ -29,14 +30,31 @@
         {% if tab == "documents" %}
             {% for document in documents %}
             <div class="step">
-                <div>{{ document.get_doc_type_display }} · {{ document.public_id }} · {{ document.get_status_display }}</div>
-                {% if document.status != "VERIFIED" and document.status != "REJECTED" %}
+                <div>
+                    {{ document.get_doc_type_display }} · {{ document.public_id }} · {{ document.get_status_display }}
+                    {% if document.slot_id %}<span class="muted">· slot {{ document.slot_id }}</span>{% endif %}
+                    {% if document.version > 1 %}<span class="muted">· v{{ document.version }}</span>{% endif %}
+                </div>
+                {% if document.rejection_reason %}<p class="muted">{{ document.rejection_reason }}</p>{% endif %}
                 <div class="action-row">
+                    {% if document.file %}
+                    <form method="post" action="/administration/documents/{{ document.public_id }}/download/">
+                        {% csrf_token %}
+                        <button class="secondary" type="submit">Download</button>
+                    </form>
+                    {% else %}
+                    <span class="muted">No file stored.</span>
+                    {% endif %}
+                    {% if document.status != "VERIFIED" and document.status != "REJECTED" %}
                     <form method="post" action="/administration/documents/{{ document.public_id }}/">
                         {% csrf_token %}
                         <input type="hidden" name="action" value="approve">
                         <button type="submit">Approve</button>
                     </form>
+                    {% endif %}
+                </div>
+                {% if document.status != "VERIFIED" and document.status != "REJECTED" %}
+                <div class="action-row">
                     <form method="post" action="/administration/documents/{{ document.public_id }}/" class="reject-form">
                         {% csrf_token %}
                         <input type="hidden" name="action" value="reject">
@@ -45,11 +63,30 @@
                         </label>
                         <button class="danger" type="submit">Reject</button>
                     </form>
+                    <form method="post" action="/administration/documents/{{ document.public_id }}/" class="reject-form">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="request_replacement">
+                        <label class="field grow">Ask for a replacement
+                            <input name="reason" required placeholder="What should the merchant re-upload?">
+                        </label>
+                        <button class="secondary" type="submit">Request replacement</button>
+                    </form>
                 </div>
                 {% endif %}
             </div>
             {% empty %}
             <p class="muted">No documents uploaded.</p>
+            {% endfor %}
+        {% elif tab == "verification" %}
+            <p class="muted">Registry and bank checks run against Cashfree for this merchant.</p>
+            {% for record in verifications %}
+            <div class="step">
+                <span>{{ record.get_verification_type_display }} · {{ record.public_id }}</span>
+                <span class="badge {% if record.status == 'SUCCESS' %}ok{% elif record.status == 'FAILED' %}danger{% else %}neutral{% endif %}">{{ record.get_status_display }}</span>
+            </div>
+            <p class="muted">{{ record.created_at }}{% if record.expires_at %} · expires {{ record.expires_at }}{% endif %}</p>
+            {% empty %}
+            <p class="muted">No verification attempts recorded.</p>
             {% endfor %}
         {% elif tab == "orders" %}
             {% for order in orders %}
@@ -71,6 +108,16 @@
             {% empty %}<p class="muted">No audit events for this merchant.</p>{% endfor %}
         {% else %}
             <p>Owner: {{ merchant.owner.email }}</p>
+            {% if application %}
+            <p>Application {{ application.public_id }} is {{ application.get_status_display }}.</p>
+            {% endif %}
+
+            {% if review.available %}
+            {% include "portals/includes/application_review.html" %}
+            {% else %}
+            <p class="muted">This merchant has not started an application yet.</p>
+            {% endif %}
+
             <div class="action-row mt-3">
                 <form method="post" class="toolbar">
                     {% csrf_token %}
@@ -100,7 +147,6 @@
                 {% endif %}
             </div>
             {% if application %}
-            <p>Application {{ application.public_id }} is {{ application.get_status_display }}.</p>
             <div class="review-actions mt-3">
             <form method="post">
                 {% csrf_token %}
@@ -129,10 +175,9 @@
                 <input type="hidden" name="action" value="clarification">
                 <label class="field">Section
                     <select name="step_key">
-                        <option value="bank">Bank</option>
-                        <option value="kyc">KYC</option>
-                        <option value="kyb">KYB</option>
-                        <option value="documents">Documents</option>
+                        {% for key, label in clarification_sections %}
+                        <option value="{{ key }}">{{ label }}</option>
+                        {% endfor %}
                     </select>
                 </label>
                 <label class="field">Message

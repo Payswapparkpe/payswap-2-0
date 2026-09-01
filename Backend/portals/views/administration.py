@@ -16,6 +16,7 @@ from agreements.services import AgreementService
 from audit.models import AuditEvent
 from audit.services import AuditService
 from merchants.models import Merchant, OnboardingApplication
+from merchants.review import CLARIFICATION_SECTIONS, application_review_context
 from merchants.services import MerchantOnboardingService
 from merchants.states import ApplicationStatus
 from orders.models import OrderStatus, PaymentOrder
@@ -248,7 +249,10 @@ class MerchantDetailView(AdministrationRequiredMixin, View):
                 "merchant": merchant,
                 "application": application,
                 "tab": tab,
+                "review": application_review_context(application),
+                "clarification_sections": CLARIFICATION_SECTIONS,
                 "documents": merchant.documents.select_related("reviewed_by", "uploaded_by").all(),
+                "verifications": VerificationRecord.objects.filter(merchant=merchant)[:50],
                 "orders": merchant.orders.all()[:20],
                 "agreements": merchant.agreements.all(),
                 "audit_events": AuditEvent.objects.filter(resource_id=merchant.public_id)[:30],
@@ -513,10 +517,26 @@ class DocumentReviewView(AdministrationRequiredMixin, View):
     def post(self, request, public_id):
         document = get_object_or_404(Document, public_id=public_id)
         action = request.POST.get("action")
-        if action == "approve":
-            DocumentReviewService.approve(document=document, actor=request.user, request=request)
-        elif action == "reject":
-            DocumentReviewService.reject(
-                document=document, actor=request.user, reason=request.POST.get("reason", ""), request=request
-            )
+        try:
+            if action == "approve":
+                DocumentReviewService.approve(document=document, actor=request.user, request=request)
+            elif action == "reject":
+                DocumentReviewService.reject(
+                    document=document,
+                    actor=request.user,
+                    reason=request.POST.get("reason", ""),
+                    request=request,
+                )
+            elif action == "request_replacement":
+                reason = request.POST.get("reason", "").strip()
+                if not reason:
+                    raise ValidationError("Say what the merchant should re-upload.")
+                DocumentReviewService.request_replacement(
+                    document=document, actor=request.user, reason=reason
+                )
+                messages.success(request, "Replacement requested; the merchant was notified.")
+            else:
+                messages.error(request, "Unknown action.")
+        except ValidationError as exc:
+            messages.error(request, " ".join(exc.messages))
         return redirect(f"/administration/merchants/{document.merchant.public_id}/?tab=documents")

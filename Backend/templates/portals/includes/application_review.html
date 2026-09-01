@@ -1,0 +1,62 @@
+{% comment %}
+Submitted application data for a reviewer. Shared by the administration merchant
+detail page and the employee KYC queue so both portals show the same evidence.
+Values are already masked by display_step_data — never render raw step data here.
+{% endcomment %}
+<div class="review-data">
+    {% for section in review.sections %}
+    <section class="review-section">
+        <h3>{{ section.title }}</h3>
+        <dl class="review-grid">
+            {% for row in section.rows %}
+            <div class="review-row{% if row.missing %} is-missing{% endif %}">
+                <dt>{{ row.label }}</dt>
+                <dd>{{ row.value }}{% if row.hint %} <span class="muted">({{ row.hint }})</span>{% endif %}</dd>
+            </div>
+            {% endfor %}
+        </dl>
+    </section>
+    {% endfor %}
+
+    <section class="review-section">
+        <h3>People</h3>
+        <p class="muted">
+            Account opener is the owner:
+            <strong>{% if review.signatory_is_owner == True %}Yes{% elif review.signatory_is_owner == False %}No{% else %}Not answered{% endif %}</strong>
+            · Account opener is the authorised signatory:
+            <strong>{% if review.kyc_person_is_authorised_signatory == True %}Yes{% elif review.kyc_person_is_authorised_signatory == False %}No{% else %}Not answered{% endif %}</strong>
+            {% if review.signatory_relation %} · Relation: <strong>{{ review.signatory_relation }}</strong>{% endif %}
+        </p>
+        {% for person in review.people %}
+        <div class="step">
+            <span>{{ person.role }} — <strong>{{ person.name }}</strong></span>
+            <span class="badge {% if person.verified %}ok{% else %}neutral{% endif %}">{% if person.verified %}KYC verified{% else %}KYC pending{% endif %}</span>
+        </div>
+        <dl class="review-grid">
+            {% for row in person.rows %}
+            <div class="review-row{% if row.missing %} is-missing{% endif %}">
+                <dt>{{ row.label }}</dt>
+                <dd>{{ row.value }}</dd>
+            </div>
+            {% endfor %}
+        </dl>
+        {% empty %}
+        <p class="muted">No person KYC captured yet.</p>
+        {% endfor %}
+    </section>
+
+    <section class="review-section">
+        <h3>Directors (registry)</h3>
+        {% include "portals/includes/review_party_table.html" with party=review.directors %}
+    </section>
+
+    <section class="review-section">
+        <h3>Partners / trustees</h3>
+        {% include "portals/includes/review_party_table.html" with party=review.members %}
+    </section>
+
+    <section class="review-section">
+        <h3>Beneficial owners</h3>
+        {% include "portals/includes/review_party_table.html" with party=review.ubos %}
+    </section>
+</div>

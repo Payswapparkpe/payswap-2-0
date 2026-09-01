@@ -154,7 +154,7 @@ export class LoginComponent {
           void this.router.navigate(['/verify']);
           return;
         }
-        void this.router.navigate(['/app']);
+        void this.router.navigate(['/app/account']);
       },
       error: (err: Error & { useStaffPortal?: boolean; staffLoginUrl?: string }) => {
         this.loading.set(false);
@@ -163,7 +163,6 @@ export class LoginComponent {
           return;
         }
         this.error.set(err.message);
-        this.notify.error(err.message);
       },
     });
   }

@@ -47,9 +47,10 @@ TEMPLATES = {
     for spec in (
         NotificationTemplate(
             "verification_code",
-            "Your verification code",
-            "PayswapHub code {{ code }}. Valid 10 min. Do not share.",
+            "Your Payswap email verification code",
+            "Your one time password is {{ code }}. Please do not share this OTP any one. Powered by PAYSWAP",
             sms_type="OTP",
+            dlt_template_id="1007141008198087301",
         ),
         NotificationTemplate(
             "welcome",

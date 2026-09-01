@@ -43,24 +43,58 @@ def new_verification_id(prefix: str) -> str:
 
 
 class CashfreeClient:
-    def __init__(self, *, client_id, client_secret, environment="sandbox", http=None, sleeper=time.sleep):
+    def __init__(
+        self,
+        *,
+        client_id,
+        client_secret,
+        environment="sandbox",
+        http=None,
+        sleeper=time.sleep,
+        sdk=None,
+    ):
         self.client_id = client_id
         self.client_secret = client_secret
         self.environment = environment
         self.http = http or UrllibHttp()
         self.sleeper = sleeper
         self.base_url = PRODUCTION_BASE if environment == "production" else SANDBOX_BASE
+        if sdk is not None:
+            self._sdk = sdk
+        elif http is None:
+            from integrations.cashfree_sdk import CashfreeSdkAdapter
+
+            self._sdk = CashfreeSdkAdapter(
+                client_id=client_id,
+                client_secret=client_secret,
+                environment=environment,
+            )
+        else:
+            self._sdk = None
 
     @property
     def configured(self) -> bool:
         return bool(self.client_id and self.client_secret)
 
     def _headers(self):
-        return {
+        headers = {
             "x-client-id": self.client_id,
             "x-client-secret": self.client_secret,
             "x-api-version": API_VERSION,
         }
+        try:
+            from django.conf import settings
+
+            key_path = getattr(settings, "CASHFREE_PUBLIC_KEY_PATH", "") or ""
+            if key_path and self.client_id:
+                from integrations.cashfree_signature import generate_cf_signature
+
+                signature = generate_cf_signature(client_id=self.client_id, public_key_path=key_path)
+                if signature:
+                    headers["x-cf-signature"] = signature
+        except Exception:
+            logger.debug("cashfree signature header skipped", exc_info=True)
+        return headers
 
     def _request(self, method, path, *, payload=None, files=None, params=None, idempotent=False):
         if not self.configured:
@@ -122,9 +156,44 @@ class CashfreeClient:
             idempotent=True,
         )
 
+    def verify_pan_sync(self, *, pan: str, name: str = "") -> dict:
+        """Verify PAN via the official SDK (registry / KYB preview)."""
+        if self._sdk:
+            return self._sdk.verify_pan_sync(pan=pan, name=name)
+        raise CashfreeError("Cashfree Verification SDK is not available.", code="not_configured")
+
+    def verify_pan_360(self, *, verification_id: str, pan: str, name: str = "") -> dict:
+        """PAN 360 — richer entity / individual details from Cashfree."""
+        if self._sdk:
+            return self._sdk.verify_pan_advance(
+                verification_id=verification_id, pan=pan, name=(name or "").strip()
+            )
+        raise CashfreeError("Cashfree Verification SDK is not available.", code="not_configured")
+
+    def pan_to_gstin(self, *, verification_id: str, pan: str) -> dict:
+        if self._sdk:
+            return self._sdk.pan_to_gstin(verification_id=verification_id, pan=pan)
+        raise CashfreeError("Cashfree Verification SDK is not available.", code="not_configured")
+
+    def verify_cin(self, *, verification_id: str, cin: str) -> dict:
+        if self._sdk:
+            return self._sdk.verify_cin(verification_id=verification_id, cin=cin)
+        raise CashfreeError("Cashfree Verification SDK is not available.", code="not_configured")
+
     def verify_gstin(self, *, gstin: str) -> dict:
         """POST /gstin — no caller verification_id in the schema; never retried."""
+        if self._sdk:
+            return self._sdk.verify_gstin(gstin=gstin)
         return self._request("POST", "/gstin", payload={"gstin": gstin})
+
+    def verify_udyam(self, *, verification_id: str, udyam: str) -> dict:
+        """POST /udyam — MSME registration verification."""
+        return self._request(
+            "POST",
+            "/udyam",
+            payload={"verification_id": verification_id, "udyam": udyam},
+            idempotent=True,
+        )
 
     # ------------------------------------------------------------------
     # Banking
@@ -152,6 +221,13 @@ class CashfreeClient:
     def digilocker_create_url(
         self, *, verification_id: str, documents: list[str], redirect_url: str, user_flow: str = "signup"
     ) -> dict:
+        if self._sdk:
+            return self._sdk.digilocker_create_url(
+                verification_id=verification_id,
+                documents=documents,
+                redirect_url=redirect_url,
+                user_flow=user_flow,
+            )
         return self._request(
             "POST",
             "/digilocker",
@@ -165,6 +241,10 @@ class CashfreeClient:
         )
 
     def digilocker_get_status(self, *, verification_id: str = "", reference_id: str = "") -> dict:
+        if self._sdk:
+            return self._sdk.digilocker_get_status(
+                verification_id=verification_id, reference_id=reference_id
+            )
         params = {}
         if verification_id:
             params["verification_id"] = verification_id
@@ -175,6 +255,12 @@ class CashfreeClient:
     def digilocker_get_document(
         self, *, document_type: str, verification_id: str = "", reference_id: str = ""
     ) -> dict:
+        if self._sdk:
+            return self._sdk.digilocker_get_document(
+                document_type=document_type,
+                verification_id=verification_id,
+                reference_id=reference_id,
+            )
         params = {}
         if verification_id:
             params["verification_id"] = verification_id

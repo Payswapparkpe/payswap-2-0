@@ -5,6 +5,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { SplitAuthLayoutComponent } from '../../../shared/ui/split-auth-layout/split-auth-layout.component';
 import { OtpInputComponent } from '../../../shared/ui/otp-input/otp-input.component';
 import { AuthService } from '../../../core/services/auth.service';
+import { OtpService } from '../../../core/services/otp.service';
 import { InlineAlertComponent } from '../../../shared/ui/inline-alert/inline-alert.component';
 import { NotificationService } from '../../../core/services/notification.service';
 import { LocaleService } from '../../../core/services/locale.service';
@@ -20,7 +21,11 @@ import { LocaleService } from '../../../core/services/locale.service';
         <h2>{{ channel() === 'mobile' ? 'Verify your mobile' : 'Verify your email' }}</h2>
         <p class="sub">
           Enter the 6-digit code sent to
-          <strong>{{ target() }}</strong>. Demo code is <code>123456</code>.
+          <strong>{{ target() }}</strong>.
+          {{ otp.channelHint(channel()) }}
+          @if (otp.testModeHint(); as hint) {
+            <span class="dev-hint">{{ hint }}</span>
+          }
         </p>
 
         <form [formGroup]="form" (ngSubmit)="submit()">
@@ -64,6 +69,12 @@ import { LocaleService } from '../../../core/services/locale.service';
       .sub {
         color: #6d6484;
       }
+      .dev-hint {
+        display: block;
+        margin-top: 8px;
+        font-size: 12px;
+        color: #8a819d;
+      }
       form {
         display: grid;
         gap: 18px;
@@ -90,6 +101,7 @@ import { LocaleService } from '../../../core/services/locale.service';
 export class VerifyComponent implements OnInit, OnDestroy {
   private readonly fb = inject(FormBuilder);
   private readonly auth = inject(AuthService);
+  readonly otp = inject(OtpService);
   private readonly router = inject(Router);
   private readonly notify = inject(NotificationService);
   private readonly locale = inject(LocaleService);
@@ -121,6 +133,7 @@ export class VerifyComponent implements OnInit, OnDestroy {
   });
 
   ngOnInit(): void {
+    this.otp.loadConfig().subscribe();
     if (!this.auth.user() && !this.auth.registrationPending()) {
       this.auth.hydrate().subscribe((user) => {
         if (!user && !this.auth.registrationPending()) {
@@ -128,13 +141,13 @@ export class VerifyComponent implements OnInit, OnDestroy {
           return;
         }
         if (user?.mobileVerified && user.emailVerified) {
-          void this.router.navigate(['/app']);
+          void this.router.navigate(['/app/account']);
         }
       });
     } else {
       const user = this.auth.user();
       if (user?.mobileVerified && user.emailVerified) {
-        void this.router.navigate(['/app']);
+        void this.router.navigate(['/app/account']);
       }
     }
     this.startTimer();
@@ -157,7 +170,7 @@ export class VerifyComponent implements OnInit, OnDestroy {
         this.loading.set(false);
         this.form.reset();
         if (user.mobileVerified && user.emailVerified) {
-          void this.router.navigate(['/app']);
+          void this.router.navigate(['/app/account']);
         } else {
           this.startTimer();
         }
@@ -165,7 +178,6 @@ export class VerifyComponent implements OnInit, OnDestroy {
       error: (err: Error) => {
         this.loading.set(false);
         this.error.set(err.message);
-        this.notify.error(err.message);
       },
     });
   }
@@ -174,15 +186,21 @@ export class VerifyComponent implements OnInit, OnDestroy {
     const channel = this.channel();
     this.auth.resendRegistrationOtp(channel).subscribe({
       next: () => {
-        this.notify.success('A new code has been sent.');
+        this.notify.success(
+          channel === 'mobile'
+            ? 'A new code has been sent by SMS (Kaleyra).'
+            : 'A new code has been sent to your email.',
+        );
         this.startTimer();
       },
-      error: (err: Error) => this.notify.error(err.message),
+      error: (err: Error) => {
+        this.error.set(err.message);
+      },
     });
   }
 
   private startTimer(): void {
-    this.seconds.set(30);
+    this.seconds.set(this.otp.config().otpCooldownSeconds || 30);
     if (this.timer) {
       clearInterval(this.timer);
     }

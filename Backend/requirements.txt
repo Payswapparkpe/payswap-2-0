@@ -22,6 +22,8 @@ pytest==9.1.1
 pytest-django==4.14.0
 pytest-cov==7.1.0
 factory-boy==3.3.3
+certifi>=2024.0.0
+cashfree-verification==3.0.0
 bandit==1.9.4
 pip-audit==2.10.1
 pre-commit==4.6.2

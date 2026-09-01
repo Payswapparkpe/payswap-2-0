@@ -30,14 +30,31 @@ def _idempotency_key(template: str, recipient: str, context: dict) -> str:
 
 class EmailService:
     FROM_NAME = "Payswap"
+    OTP_TEMPLATES = frozenset({"verification_code"})
+    # Auth mail must use the verified support@ sender — noreply@ SES identity rejects locally.
+    AUTH_EMAIL_TEMPLATES = frozenset({"verification_code", "password_reset"})
 
     @staticmethod
-    def branded_from_email() -> str:
-        raw = getattr(settings, "DEFAULT_FROM_EMAIL", "") or ""
+    def branded_from_email(*, template: str = "") -> str:
+        if template in EmailService.AUTH_EMAIL_TEMPLATES:
+            raw = getattr(settings, "OTP_FROM_EMAIL", "") or getattr(settings, "DEFAULT_FROM_EMAIL", "")
+        else:
+            raw = getattr(settings, "DEFAULT_FROM_EMAIL", "") or ""
         _name, addr = parseaddr(raw)
         if not addr:
-            addr = raw or "noreply@payswap.in"
-        return formataddr((EmailService.FROM_NAME, addr))
+            addr = "support@payswap.in" if template in EmailService.OTP_TEMPLATES else "noreply@payswap.in"
+        display = _name or EmailService.FROM_NAME
+        return formataddr((display, addr))
+
+    @staticmethod
+    def reply_to_for(*, template: str = "") -> list[str]:
+        if template in EmailService.AUTH_EMAIL_TEMPLATES:
+            addr = getattr(settings, "OTP_REPLY_TO_EMAIL", "") or "support@payswap.in"
+            return [addr]
+        grievance = getattr(settings, "GRIEVANCE_EMAIL", "") or ""
+        if grievance:
+            return [grievance]
+        return []
 
     @staticmethod
     def absolute_url(path: str = "") -> str:
@@ -60,6 +77,8 @@ class EmailService:
             "grievance_email": getattr(settings, "GRIEVANCE_EMAIL", "") or "",
             "grievance_officer": getattr(settings, "GRIEVANCE_OFFICER_NAME", "") or "",
             "legal_entity": getattr(settings, "LEGAL_ENTITY_NAME", "") or EmailService.FROM_NAME,
+            "otp_expiry_minutes": max(1, int(getattr(settings, "OTP_EXPIRY_SECONDS", 300) // 60)),
+            "support_email": getattr(settings, "OTP_REPLY_TO_EMAIL", "") or "support@payswap.in",
             **context,
         }
         if payload.get("action_url"):
@@ -161,9 +180,9 @@ class EmailService:
             message = EmailMultiAlternatives(
                 subject=subject,
                 body=text,
-                from_email=cls.branded_from_email(),
+                from_email=cls.branded_from_email(template=template),
                 to=[to],
-                reply_to=[getattr(settings, "GRIEVANCE_EMAIL", "") or cls.branded_from_email()],
+                reply_to=cls.reply_to_for(template=template) or None,
             )
             message.attach_alternative(html, "text/html")
             sent = message.send(fail_silently=False)

@@ -539,7 +539,7 @@ class PasswordResetService:
     self-invalidates once the password changes; sessions are revoked on use."""
 
     @staticmethod
-    def request_reset(*, email: str, request=None) -> bool:
+    def request_reset(*, email: str, request=None, console: bool = False) -> bool:
         """Always returns True; never reveals whether the account exists."""
         email = (email or "").strip().lower()
         user = User.objects.filter(email__iexact=email, is_active=True).first()
@@ -555,7 +555,11 @@ class PasswordResetService:
             return True
         uid = urlsafe_base64_encode(force_bytes(user.pk))
         token = default_token_generator.make_token(user)
-        link = f"{settings.PUBLIC_BASE_URL}/password-reset/confirm/{uid}/{token}/"
+        if console:
+            base = getattr(settings, "PUBLIC_CONSOLE_URL", settings.PUBLIC_BASE_URL).rstrip("/")
+            link = f"{base}/reset-password/{uid}/{token}"
+        else:
+            link = f"{settings.PUBLIC_BASE_URL}/password-reset/confirm/{uid}/{token}/"
         EmailService.send(
             to=user.email,
             template="password_reset",

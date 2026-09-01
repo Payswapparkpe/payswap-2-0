@@ -5,10 +5,11 @@ from django_ratelimit.decorators import ratelimit
 from integrations.postal import PostalService
 from merchants.models import Merchant
 from merchants.services import MerchantOnboardingService
-from verification.services import DocumentReviewService, VerificationService
+from verification.services import DocumentReviewService
+from verification.slots import doc_type_for_slot, normalize_slot_id
 
 from .mixins import JsonView, MerchantRequiredMixin, api_error, parse_json
-from .serializers import onboarding_payload, onboarding_step_data_from_angular
+from .serializers import document_payload, onboarding_payload, onboarding_step_data_from_angular
 
 
 def _merchant_context(user):
@@ -30,9 +31,12 @@ class OnboardingView(MerchantRequiredMixin, JsonView):
     def put(self, request):
         body = parse_json(request)
         merchant, application = _merchant_context(request.user)
-        step = body.get("currentStep") or body.get("step") or "profile"
+        # Angular sends currentStep as the navigation target; step is the screen being saved.
+        step = body.get("step") or body.get("completedStep") or body.get("currentStep") or "profile"
         key, data = onboarding_step_data_from_angular(step, body)
-        MerchantOnboardingService.save_step(application, key=key, actor=request.user, data=data)
+        MerchantOnboardingService.save_step(
+            application, key=key, actor=request.user, data=data, source_step=step
+        )
         merchant.refresh_from_db()
         application.refresh_from_db()
         return self.ok(onboarding_payload(user=request.user, application=application, merchant=merchant))
@@ -68,71 +72,19 @@ class OnboardingDocumentView(MerchantRequiredMixin, JsonView):
         uploaded = request.FILES.get("file")
         if not uploaded:
             return api_error("Choose a file to upload.")
-        doc_type = request.POST.get("doc_type") or request.POST.get("slotId") or "OTHER"
+        slot_id = normalize_slot_id(request.POST.get("slotId") or request.POST.get("doc_type") or "")
+        if not slot_id:
+            return api_error("Missing upload slot.")
         document_number = request.POST.get("document_number") or ""
-        document = DocumentReviewService.register_upload(
-            merchant=merchant,
-            actor=request.user,
-            doc_type=doc_type.upper(),
-            uploaded_file=uploaded,
-            document_number=document_number,
-        )
-        return self.ok({"publicId": document.public_id, "docType": document.doc_type, "status": document.status})
-
-
-class VerificationStartView(MerchantRequiredMixin, JsonView):
-    def post(self, request):
-        body = parse_json(request)
-        merchant, application = _merchant_context(request.user)
-        kind = (body.get("kind") or "").lower()
-        if kind == "pan":
-            business = application.steps.get(key="business")
-            from merchants.privacy import decrypt_step_data
-
-            data = decrypt_step_data(business.data)
-            owners = decrypt_step_data(application.steps.get(key="owners").data)
-            record = VerificationService.verify_pan(
+        try:
+            document = DocumentReviewService.register_upload(
                 merchant=merchant,
                 actor=request.user,
-                pan=body.get("pan") or data.get("pan") or "",
-                name=body.get("name") or owners.get("owner_name") or request.user.name,
-                dob=body.get("dob") or owners.get("owner_dob") or "",
-                request=request,
+                doc_type=doc_type_for_slot(slot_id),
+                uploaded_file=uploaded,
+                document_number=document_number,
+                slot_id=slot_id,
             )
-            return self.ok({"publicId": record.public_id, "status": record.status})
-        if kind == "gstin":
-            record = VerificationService.verify_gstin(
-                merchant=merchant,
-                actor=request.user,
-                gstin=body.get("gstin") or "",
-                request=request,
-            )
-            return self.ok({"publicId": record.public_id, "status": record.status})
-        if kind == "bank":
-            record = VerificationService.verify_bank(
-                merchant=merchant,
-                actor=request.user,
-                account_number=body.get("accountNumber") or "",
-                ifsc=body.get("ifsc") or "",
-                name=body.get("name") or merchant.business_name,
-                request=request,
-            )
-            return self.ok({"publicId": record.public_id, "status": record.status})
-        if kind == "collected":
-            records = VerificationService.verify_collected(merchant=merchant, actor=request.user, request=request)
-            return self.ok({"records": [{"publicId": r.public_id, "status": r.status} for r in records]})
-        return api_error("Unsupported verification kind.")
-
-
-class VerificationStatusView(MerchantRequiredMixin, JsonView):
-    def get(self, request):
-        merchant, _application = _merchant_context(request.user)
-        return self.ok(
-            {
-                "kycStatus": merchant.kyc_status,
-                "kybStatus": merchant.kyb_status,
-                "bankStatus": merchant.bank_status,
-                "agreementStatus": merchant.agreement_status,
-                "commercialStatus": merchant.commercial_status,
-            }
-        )
+        except ValidationError as exc:
+            return api_error(" ".join(exc.messages))
+        return self.ok(document_payload(document))

@@ -14,6 +14,7 @@ import {
 } from '../../core/config/order.util';
 import { OnboardingService } from '../../core/services/onboarding.service';
 import { AuthService } from '../../core/services/auth.service';
+import { OtpService } from '../../core/services/otp.service';
 import { OtpInputComponent } from '../../shared/ui/otp-input/otp-input.component';
 
 @Component({
@@ -118,7 +119,7 @@ import { OtpInputComponent } from '../../shared/ui/otp-input/otp-input.component
       <section>
         <h3>Fulfilment file</h3>
         @if (isAdmin() && (row.status === 'placed' || row.status === 'processing')) {
-          <p class="hint">Upload the brand voucher / card file. Payswap generates a password, mails a locked copy, and partners reveal it with OTP 123456.</p>
+          <p class="hint">Upload the brand voucher / card file. Payswap generates a password, mails a locked copy, and partners reveal it after email OTP verification.</p>
           <input type="file" (change)="onFile($event)" />
           @if (pendingFileName()) {
             <p>Selected: {{ pendingFileName() }}</p>
@@ -136,7 +137,9 @@ import { OtpInputComponent } from '../../shared/ui/otp-input/otp-input.component
         }
         @if (!isAdmin() && row.fulfilmentFile) {
           @if (!revealed()) {
-            <p class="hint">Request OTP on {{ auth.user()?.email }} to see the password. Demo OTP is 123456.</p>
+            <p class="hint">
+              Request an OTP on {{ auth.user()?.email }}. Mobile OTP for other flows uses Kaleyra SMS ({{ otp.config().smsSender }}).
+            </p>
             <button mat-stroked-button type="button" [disabled]="busy()" (click)="sendOtp()">Send OTP</button>
             @if (otpSent()) {
               <p class="label">OTP</p>
@@ -292,6 +295,7 @@ export class OrderDetailComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly onboarding = inject(OnboardingService);
   readonly auth = inject(AuthService);
+  readonly otp = inject(OtpService);
 
   readonly order = signal<PartnerOrder | null>(null);
   readonly error = signal('');
