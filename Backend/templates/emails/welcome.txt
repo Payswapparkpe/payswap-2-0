@@ -1,0 +1,11 @@
+{{ product }}
+
+Welcome to {{ product }}
+Your merchant account is ready.
+
+Sign-in email: {{ email|default:user.email }}
+Use the password you created during registration. We never send passwords by email.
+
+Sign in, complete onboarding (KYC, KYB, bank), then agreement eSign. After that you can place voucher orders.
+
+{{ action_url }}

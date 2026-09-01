@@ -1,0 +1,26 @@
+[tool.ruff]
+target-version = "py312"
+line-length = 110
+extend-exclude = ["*/migrations/*", "static/vendor/*", "output/*"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W", "UP", "B", "SIM", "S"]
+ignore = [
+    "S101",    # asserts are fine in tests
+    "E501",    # line length handled by formatter
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["B", "SIM", "S105", "S106", "S107"]
+# PASSWORD_* constants are policy text, not credentials.
+"accounts/password_policy.py" = ["S105"]
+"*/management/commands/*" = ["S"]
+# UrllibHttp is the audited integration HTTP client; scheme restriction would
+# belong in a wrapper, not the transport.
+"integrations/http.py" = ["S310"]
+# test_settings intentionally mutates base settings after import.
+"core/test_settings.py" = ["E402"]
+
+[tool.bandit]
+exclude_dirs = ["tests", "*/migrations/*", "static/vendor", "output"]
+skips = ["B101"]

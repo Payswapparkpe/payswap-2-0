@@ -1,0 +1,80 @@
+{% extends "layouts/administration.html" %}
+{% block heading %}Verification dashboard{% endblock %}
+{% block subhead %}Cashfree verification records across merchants.{% endblock %}
+{% block content %}
+<section class="grid kpis" aria-label="Verification overview">
+    {% for card in cards %}
+    <a class="card kpi" href="{{ card.url }}">
+        <div class="kpi-label">{{ card.label }}</div>
+        <div class="value">{{ card.value }}</div>
+        <span class="kpi-link">Open workspace</span>
+        <span class="spark" aria-hidden="true"></span>
+    </a>
+    {% endfor %}
+</section>
+
+<form method="get" class="card toolbar mt-3">
+    <label class="field grow">Search
+        <input name="q" value="{{ filters.q }}" placeholder="Merchant, masked identifier or reference" autocomplete="off">
+    </label>
+    <label class="field">Type
+        <select name="type">
+            <option value="">All types</option>
+            {% for value, label in type_choices %}
+            <option value="{{ value }}" {% if filters.type == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </label>
+    <label class="field">Status
+        <select name="status">
+            <option value="">All statuses</option>
+            {% for value, label in status_choices %}
+            <option value="{{ value }}" {% if filters.status == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </label>
+    <button type="submit">Filter</button>
+</form>
+
+<div class="card table-wrap mt-3">
+    <table>
+        <thead>
+            <tr>
+                <th>Merchant</th><th>Type</th><th>Identifier</th><th>Status</th>
+                <th>Requested</th><th>Verified</th><th>Expires</th><th>Reference</th><th></th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for record in records %}
+            <tr>
+                <td><a href="{% url 'administration:merchant_detail' record.merchant.public_id %}">{{ record.merchant.business_name }}</a></td>
+                <td>{{ record.get_verification_type_display }}</td>
+                <td>{{ record.document_masked|default:"—" }}{% if record.reused_from_id %} <span class="badge neutral">reused</span>{% endif %}</td>
+                <td>
+                    {% if record.status == "VERIFIED" %}<span class="badge ok">Verified</span>
+                    {% elif record.status == "FAILED" or record.status == "REJECTED" %}<span class="badge danger">{{ record.get_status_display }}</span>
+                    {% elif record.status == "PENDING" or record.status == "PROCESSING" %}<span class="badge neutral">{{ record.get_status_display }}</span>
+                    {% else %}<span class="badge warn">{{ record.get_status_display }}</span>{% endif %}
+                </td>
+                <td>{{ record.requested_at|date:"d M Y" }}</td>
+                <td>{{ record.completed_at|date:"d M Y"|default:"—" }}</td>
+                <td>{{ record.expires_at|date:"d M Y"|default:"—" }}</td>
+                <td class="muted">{{ record.reference_id|default:"—" }}</td>
+                <td>
+                    {% if record.status == "VERIFIED" %}
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="record" value="{{ record.public_id }}">
+                        <button type="submit" name="action" value="expire" class="btn ghost">Expire</button>
+                    </form>
+                    {% endif %}
+                </td>
+            </tr>
+        {% empty %}
+            <tr><td colspan="9" class="muted">No verification records match the filters.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% include "partials/pager.html" %}
+</div>
+{% endblock %}

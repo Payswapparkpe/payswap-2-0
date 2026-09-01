@@ -1,0 +1,130 @@
+{% extends "layouts/merchant.html" %}
+{% block heading %}{{ greeting }}, {{ request.user.name|default:request.user.email }}{% endblock %}
+{% block subhead %}
+{% if merchant and merchant.commercial_status == "ACTIVE" %}Your account is commercially active.{% else %}Finish onboarding to become commercially active.{% endif %}
+{% endblock %}
+{% block content %}
+{% if next_action %}
+<section class="paper-sheet next-action next-action-{{ next_action.tone|default:'info' }}">
+    <div class="card-head">
+        <div>
+            <h2>{{ next_action.title }}</h2>
+            <p class="muted">{{ next_action.body }}</p>
+        </div>
+        <a class="btn" href="{{ next_action.href }}">{{ next_action.cta }}</a>
+    </div>
+</section>
+{% endif %}
+
+{% if application and application.status == "REJECTED" %}
+<div class="alert alert-error" role="alert">
+    <strong>Application rejected.</strong>
+    {{ application.rejection_reason|default:application.rejection_notes|default:"Please contact support for help." }}
+</div>
+{% elif application and application.status == "CLARIFICATION_REQUIRED" %}
+<div class="alert alert-warn" role="alert">
+    <strong>Action required.</strong>
+    Update the highlighted section, then resubmit.
+    <a href="/merchant/onboarding/{{ application.public_id }}/">Open application</a>
+</div>
+{% endif %}
+
+{% if profile_gaps and application and application.status == "DRAFT" %}
+<div class="alert alert-warn">
+    Still needed in onboarding: {{ profile_gaps|join:", " }}. Documents must match those details at {{ match_threshold }}%.
+</div>
+{% endif %}
+
+{% if merchant %}
+<section class="status-strip" aria-label="Verification status">
+    <div class="status-chip">
+        <span class="muted">KYC</span>
+        <span class="badge {% if merchant.kyc_status == 'VERIFIED' %}ok{% elif merchant.kyc_status == 'ACTION_REQUIRED' or merchant.kyc_status == 'REJECTED' %}danger{% elif merchant.kyc_status == 'PENDING' %}info{% else %}neutral{% endif %}">{{ merchant.get_kyc_status_display }}</span>
+    </div>
+    <div class="status-chip">
+        <span class="muted">KYB</span>
+        <span class="badge {% if merchant.kyb_status == 'VERIFIED' %}ok{% elif merchant.kyb_status == 'ACTION_REQUIRED' or merchant.kyb_status == 'REJECTED' %}danger{% elif merchant.kyb_status == 'PENDING' %}info{% else %}neutral{% endif %}">{{ merchant.get_kyb_status_display }}</span>
+    </div>
+    <div class="status-chip">
+        <span class="muted">Bank</span>
+        <span class="badge {% if merchant.bank_status == 'VERIFIED' %}ok{% elif merchant.bank_status == 'ACTION_REQUIRED' or merchant.bank_status == 'REJECTED' %}danger{% elif merchant.bank_status == 'PENDING' %}info{% else %}neutral{% endif %}">{{ merchant.get_bank_status_display }}</span>
+    </div>
+    <div class="status-chip">
+        <span class="muted">Agreement</span>
+        <span class="badge {% if merchant.agreement_status == 'VERIFIED' %}ok{% elif merchant.agreement_status == 'ACTION_REQUIRED' or merchant.agreement_status == 'REJECTED' %}danger{% elif merchant.agreement_status == 'PENDING' %}info{% else %}neutral{% endif %}">{{ merchant.get_agreement_status_display }}</span>
+    </div>
+</section>
+{% endif %}
+
+<section class="hero-panel">
+    <div class="paper-sheet progress-rail">
+        <div class="card-head">
+            <div>
+                <h2>Onboarding progress</h2>
+                {% if application %}
+                <p class="muted">{{ wizard_done }} of {{ wizard_total }} sections complete · {{ wizard_percent }}%</p>
+                {% else %}
+                <p class="muted">Five sections. Verification runs after you submit.</p>
+                {% endif %}
+            </div>
+            <svg class="sheet-ico" aria-hidden="true"><use href="#i-clip"/></svg>
+        </div>
+        {% if application %}
+            <div class="progress-meter" aria-hidden="true"><span style="--w: {{ wizard_percent }}%"></span></div>
+            <ol class="rail">
+            {% for item in wizard_progress %}
+                <li class="rail-step {% if item.done %}done{% endif %}{% if item.needs_fix %}needs-fix{% endif %}">
+                    <span>
+                        <a href="/merchant/onboarding/{{ application.public_id }}/?step={{ item.key }}">{{ item.label }}</a>
+                        <span class="muted">{{ item.hint }}</span>
+                    </span>
+                    <span class="badge {% if item.done %}ok{% elif item.needs_fix %}warn{% else %}neutral{% endif %}">
+                        {% if item.done %}Complete{% elif item.needs_fix %}Action required{% else %}To do{% endif %}
+                    </span>
+                </li>
+            {% endfor %}
+            </ol>
+            {% if application.status == "APPROVED" %}
+            <p class="status-copy">Application approved.{% if merchant.agreement_status != "VERIFIED" %} Sign your <a href="/merchant/agreements/">agreement</a> if eSign is still pending.{% endif %}</p>
+            {% elif application.status == "SUBMITTED" or application.status == "UNDER_REVIEW" %}
+            <div class="post-submit-checklist">
+                <p class="status-copy">Application {{ application.public_id }} submitted. What happens next:</p>
+                <ol class="plain-list">
+                    <li><a href="/merchant/verification/">Run PAN, GSTIN, bank, and DigiLocker checks</a></li>
+                    <li>Our team reviews documents and business details</li>
+                    <li><a href="/merchant/agreements/">Sign the agreement</a> after approval</li>
+                </ol>
+            </div>
+            {% elif application.status == "DRAFT" %}
+            <p class="action-row"><a class="btn" href="/merchant/onboarding/{{ application.public_id }}/">Continue application</a></p>
+            {% endif %}
+        {% else %}
+            {% include "partials/empty.html" with art="store" title="Create your merchant profile" body="Choose the type of business, then complete people, bank, and documents in the wizard." cta="Start onboarding" cta_href="/merchant/onboarding/" %}
+        {% endif %}
+    </div>
+    <div class="grid kpis">
+        <div class="paper-sheet kpi icon-kpi">
+            <span class="kpi-ico" aria-hidden="true"><svg><use href="#i-cart"/></svg></span>
+            <div><div class="kpi-label">Open orders</div><div class="value">{{ open_orders }}</div></div>
+        </div>
+        <div class="paper-sheet kpi icon-kpi">
+            <span class="kpi-ico" aria-hidden="true"><svg><use href="#i-chart"/></svg></span>
+            <div><div class="kpi-label">Orders this month</div><div class="value">{{ month_orders }}</div></div>
+        </div>
+        <div class="paper-sheet kpi icon-kpi">
+            <span class="kpi-ico" aria-hidden="true"><svg><use href="#i-wallet"/></svg></span>
+            <div><div class="kpi-label">Approved orders</div><div class="value">{{ approved_orders }}</div></div>
+        </div>
+    </div>
+</section>
+<p class="action-row">
+    {% if can_create_orders %}
+    <a class="btn" href="/merchant/orders/new/">Create purchase order</a>
+    {% else %}
+    <a class="btn secondary" href="{% if application %}/merchant/onboarding/{{ application.public_id }}/{% else %}/merchant/onboarding/{% endif %}">Finish onboarding first</a>
+    {% endif %}
+    <a class="btn secondary" href="/merchant/orders/">View orders</a>
+    <a class="btn secondary" href="/merchant/agreements/">Agreements</a>
+    <a class="btn ghost" href="/merchant/verification/">Verification</a>
+</p>
+{% endblock %}

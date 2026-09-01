@@ -1,0 +1,6 @@
+{{ product }}
+
+Agreement ready
+{{ body|default:"Please review and sign your service agreement." }}
+{% if reference %}Reference: {{ reference }}
+{% endif %}{{ action_url }}

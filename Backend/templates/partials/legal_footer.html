@@ -1,0 +1,9 @@
+<nav class="legal-footer" aria-label="Legal">
+    <p class="legal-copy">© {{ copyright_year }} Payswap. All rights reserved.</p>
+    <span class="legal-footer-links">
+        <a href="/legal/privacy/">Privacy Policy</a>
+        <a href="/legal/terms/">Terms and Conditions</a>
+        <a href="/legal/cookies/">Cookie Policy</a>
+        {% if grievance_email %}<a href="mailto:{{ grievance_email }}">{{ grievance_email }}</a>{% endif %}
+    </span>
+</nav>

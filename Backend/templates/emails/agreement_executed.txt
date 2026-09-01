@@ -1,0 +1,6 @@
+{{ product }}
+
+Agreement in force
+{{ body|default:"The agreement has been countersigned. Your account is commercially active." }}
+{% if reference %}Reference: {{ reference }}
+{% endif %}{{ action_url }}

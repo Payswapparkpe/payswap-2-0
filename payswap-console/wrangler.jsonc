@@ -1,0 +1,12 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "payswap-console",
+  "compatibility_date": "2026-08-24",
+  "assets": {
+    "directory": "./dist/payswap-console/browser",
+    "not_found_handling": "single-page-application"
+  },
+  "observability": {
+    "enabled": true
+  }
+}

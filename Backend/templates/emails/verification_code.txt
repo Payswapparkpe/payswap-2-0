@@ -1,0 +1,9 @@
+{{ product }}
+
+Verify your email
+Use this code in {{ product }}. It expires in 10 minutes.
+
+{{ code }}
+
+Never share this code.
+{{ home_url }}

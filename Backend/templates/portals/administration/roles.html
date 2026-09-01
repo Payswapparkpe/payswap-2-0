@@ -1,0 +1,13 @@
+{% extends "layouts/administration.html" %}
+{% block heading %}Roles and permissions{% endblock %}
+{% block content %}
+{% for role in roles %}
+<section class="card mb-3">
+    <h2>{{ role.name }}</h2>
+    <p class="muted">{{ role.slug }}</p>
+    <p>{% for permission in role.permissions.all %}{{ permission.codename }}{% if not forloop.last %}, {% endif %}{% empty %}No permissions.{% endfor %}</p>
+</section>
+{% empty %}
+{% include "partials/empty.html" with art="key" title="Roles are not seeded" body="Run python manage.py seed_payswaphub to load the permission matrix." %}
+{% endfor %}
+{% endblock %}

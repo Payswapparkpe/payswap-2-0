@@ -1,0 +1,16 @@
+{% if record %}
+    {% if record.status == "VERIFIED" %}<span class="badge ok">Verified</span>
+    {% elif record.status == "PARTIALLY_VERIFIED" %}<span class="badge warn">Partially verified</span>
+    {% elif record.status == "PENDING" or record.status == "PROCESSING" %}<span class="badge neutral">{{ record.get_status_display }}</span>
+    {% elif record.status == "REQUIRES_ACTION" or record.status == "REQUIRES_RETRY" %}<span class="badge warn">Requires action</span>
+    {% elif record.status == "EXPIRED" %}<span class="badge neutral">Expired</span>
+    {% else %}<span class="badge danger">{{ record.get_status_display }}</span>{% endif %}
+{% elif rollup == "VERIFIED" %}
+    <span class="badge ok">Verified</span>
+{% elif rollup == "PENDING" %}
+    <span class="badge info">Pending</span>
+{% elif rollup == "ACTION_REQUIRED" or rollup == "REJECTED" %}
+    <span class="badge warn">{{ rollup|default:"Action required"|title }}</span>
+{% else %}
+    <span class="badge neutral">Not started</span>
+{% endif %}

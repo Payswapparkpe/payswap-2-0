@@ -1,0 +1,10 @@
+<div class="empty-state paper-sheet">
+    <span class="empty-ico" aria-hidden="true">
+        <svg><use href="#i-{{ art|default:'clip' }}"/></svg>
+    </span>
+    <strong>{{ title }}</strong>
+    <p class="muted">{{ body }}</p>
+    {% if cta %}
+    <p><a class="btn" href="{{ cta_href }}">{{ cta }}</a></p>
+    {% endif %}
+</div>

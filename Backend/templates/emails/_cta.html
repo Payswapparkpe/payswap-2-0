@@ -1,0 +1,7 @@
+{% if action_url %}
+<p style="margin:24px 0 0;">
+    <a href="{{ action_url }}" style="display:inline-block;background:#164e8a;color:#ffffff;text-decoration:none;padding:11px 18px;border-radius:999px;font-weight:600;">
+        {{ action_label|default:"Open portal" }}
+    </a>
+</p>
+{% endif %}

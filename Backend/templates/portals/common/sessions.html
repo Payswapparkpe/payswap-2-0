@@ -1,0 +1,20 @@
+{% extends shell_layout %}
+{% block heading %}Sessions and devices{% endblock %}
+{% block subhead %}Revoke any session you do not recognise.{% endblock %}
+{% block content %}
+{% for item in sessions %}
+<form class="card notify-item" method="post">
+    {% csrf_token %}
+    <input type="hidden" name="id" value="{{ item.pk }}">
+    <div class="card-head">
+        <strong>{{ item.ip_address }}</strong>
+        {% if item.revoked_at %}<span class="badge danger">Revoked</span>{% else %}<span class="badge ok">Active</span>{% endif %}
+    </div>
+    <p class="muted">{{ item.user_agent }}</p>
+    <p class="muted">Started {{ item.created_at }}</p>
+    {% if not item.revoked_at %}<button class="danger btn-sm" type="submit">Revoke</button>{% endif %}
+</form>
+{% empty %}
+{% include "partials/empty.html" with art="shield" title="No tracked sessions" body="Active logins will be listed here after you sign in from a device." %}
+{% endfor %}
+{% endblock %}

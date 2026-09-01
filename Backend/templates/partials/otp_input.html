@@ -1,0 +1,19 @@
+<div class="field otp-field{% if error %} is-invalid{% endif %}{% if verified %} is-valid{% endif %}">
+    <span class="field-title">{{ label }}</span>
+    {% if verified %}
+    <p class="otp-verified">
+        <svg class="field-ico" aria-hidden="true"><use href="#i-check"/></svg>
+        Verified{% if destination %} {{ destination }}{% endif %}
+    </p>
+    {% else %}
+    <div class="otp-group" data-otp-group>
+        <input type="hidden" name="{{ name }}" value="" data-otp-value data-validate="otp" autocomplete="one-time-code">
+        <div class="otp-boxes" role="group" aria-label="{{ label }}">
+            {% for _ in "123456" %}
+            <input class="otp-digit" type="text" inputmode="numeric" maxlength="1" pattern="[0-9]*" autocomplete="{% if forloop.first %}one-time-code{% else %}off{% endif %}" aria-label="Digit {{ forloop.counter }} of 6" placeholder="•">
+            {% endfor %}
+        </div>
+    </div>
+    <span class="field-alert" data-field-alert>{{ error }}</span>
+    {% endif %}
+</div>

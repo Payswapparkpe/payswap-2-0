@@ -1,0 +1,52 @@
+{% extends "layouts/administration.html" %}
+{% block heading %}Merchants{% endblock %}
+{% block subhead %}Review, assign, and oversee merchant accounts{% endblock %}
+{% block content %}
+<form method="get" class="card toolbar">
+    <label class="field grow">
+        <span class="field-title">Search</span>
+        <input name="q" value="{{ filters.q }}" placeholder="Merchant ID, name, or email">
+    </label>
+    <label class="field">
+        <span class="field-title">Status</span>
+        <select name="status">
+            <option value="">All</option>
+            <option value="ACTIVE" {% if filters.status == "ACTIVE" %}selected{% endif %}>Active</option>
+            <option value="PENDING_REVIEW" {% if filters.status == "PENDING_REVIEW" %}selected{% endif %}>Pending review</option>
+            <option value="SUSPENDED" {% if filters.status == "SUSPENDED" %}selected{% endif %}>Suspended</option>
+        </select>
+    </label>
+    <button type="submit">Apply filters</button>
+</form>
+{% if merchants %}
+<div class="card table-wrap">
+    <table>
+        <thead>
+            <tr>
+                <th>Merchant ID</th><th>Business name</th><th>Entity</th><th>Status</th>
+                <th>KYC</th><th>KYB</th><th>Bank</th><th>Agreement</th><th>Risk</th><th>Assigned</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for merchant in merchants %}
+            <tr>
+                <td><a href="/administration/merchants/{{ merchant.public_id }}/">{{ merchant.public_id }}</a></td>
+                <td>{{ merchant.business_name }}</td>
+                <td>{{ merchant.get_entity_type_display }}</td>
+                <td><span class="badge {% if merchant.status == 'ACTIVE' %}ok{% elif merchant.status == 'SUSPENDED' %}danger{% else %}neutral{% endif %}">{{ merchant.get_status_display }}</span></td>
+                <td>{{ merchant.get_kyc_status_display }}</td>
+                <td>{{ merchant.get_kyb_status_display }}</td>
+                <td>{{ merchant.get_bank_status_display }}</td>
+                <td>{{ merchant.get_agreement_status_display }}</td>
+                <td>{{ merchant.get_risk_status_display }}</td>
+                <td>{{ merchant.assigned_to|default:"—" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% include "partials/pager.html" %}
+{% else %}
+{% include "partials/empty.html" with art="store" title="No merchants match" body="Change search or status filters to find another account." %}
+{% endif %}
+{% endblock %}

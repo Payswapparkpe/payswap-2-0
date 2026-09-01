@@ -1,0 +1,18 @@
+<div class="form-status form-alerts" role="region" aria-live="polite" aria-label="Form messages">
+    {% if form.non_field_errors %}
+        {% for err in form.non_field_errors %}
+            {% include "partials/notice.html" with notice_class="banner banner-error" role="alert" icon="i-alert" text=err dismissible="1" %}
+        {% endfor %}
+    {% endif %}
+    {% if extra_error %}
+        {% include "partials/notice.html" with notice_class="banner banner-error" role="alert" icon="i-alert" text=extra_error dismissible="1" %}
+    {% endif %}
+    {% if extra_ok %}
+        {% include "partials/notice.html" with notice_class="banner banner-ok" role="status" icon="i-check" text=extra_ok dismissible="1" %}
+    {% endif %}
+    {% if form and "accept_terms" in form.fields and form.accept_terms.errors %}
+        {% for err in form.accept_terms.errors %}
+            {% include "partials/notice.html" with notice_class="banner banner-error" role="alert" icon="i-alert" text=err dismissible="1" %}
+        {% endfor %}
+    {% endif %}
+</div>

@@ -1,0 +1,80 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.pem
+*.key
+*.p12
+*.pfx
+secrets/
+credentials.json
+service-account*.json
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+.eggs/
+dist/
+build/
+*.egg
+
+# Django
+*.log
+local_settings.py
+*.sqlite3
+db.sqlite3-journal
+/media/*
+!/media/.gitkeep
+/staticfiles/
+/static_root/
+
+# Celery / Redis
+celerybeat-schedule*
+celerybeat.pid
+*.rdb
+*.aof
+*.pid
+
+# Tests and coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+.tox/
+.nox/
+.hypothesis/
+
+# Linters and type checkers
+.ruff_cache/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.bandit
+bandit-report.json
+
+# Pre-commit / packaging
+.pre-commit-cache/
+
+# OS and editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Local agent notes and browser dumps
+.playwright-cli/
+.pony-trail/

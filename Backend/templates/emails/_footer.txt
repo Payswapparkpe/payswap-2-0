@@ -1,0 +1,9 @@
+{{ legal_entity }}
+{% if grievance_officer %}{{ grievance_officer }}
+{% endif %}{% if grievance_email %}{{ grievance_email }}
+{% endif %}This message was sent to {{ user.email|default:email }}. Do not forward one-time codes.
+{% if grievance_address %}Postal address: {{ grievance_address }}
+{% endif %}{% if support_url %}Support: {{ support_url }}
+{% endif %}Notification preferences: {{ preference_url }}
+{% if unsubscribe_url %}To stop marketing messages, update preferences: {{ unsubscribe_url }}
+{% endif %}{{ home_url }}

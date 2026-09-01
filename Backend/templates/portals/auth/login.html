@@ -1,0 +1,32 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+{% block title %}Sign in{% endblock %}
+{% block body_class %}auth-page{% endblock %}
+{% block chrome_footer %}{% endblock %}
+{% block body %}
+<main class="auth-shell" id="content">
+    {% include "partials/auth_story.html" with heading="Welcome back" lead="Sign in for Payswap administration and staff operations. Corporate partners use the partner console." %}
+    <div class="auth-panel">
+        <section class="card auth-card">
+            <header class="auth-card-head">
+                <div>
+                    <h2>Sign in</h2>
+                </div>
+                {% include "partials/auth_brand.html" %}
+            </header>
+            {% include "partials/form_status.html" %}
+            <form method="post" novalidate data-validate-form>
+                {% csrf_token %}
+                {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+                <div class="form-status form-alerts" role="alert"></div>
+                {% include "partials/field.html" with field=form.email icon="i-mail" %}
+                {% include "partials/field.html" with field=form.password icon="i-lock" %}
+                <button type="submit">Sign in</button>
+            </form>
+            <p class="auth-alt"><a href="/password-reset/">Forgot your password?</a></p>
+            <p class="auth-alt">Corporate partner? <a href="{{ partner_console_login_url }}">Open the partner console</a></p>
+        </section>
+        {% include "partials/legal_footer.html" %}
+    </div>
+</main>
+{% endblock %}

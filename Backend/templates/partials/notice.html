@@ -1,0 +1,9 @@
+<div class="{{ notice_class }}" role="{{ role|default:'status' }}"{% if timeout %} data-toast data-toast-timeout="{{ timeout }}"{% endif %}>
+    <svg class="notice-ico" aria-hidden="true"><use href="#{{ icon|default:'i-bell' }}"/></svg>
+    <p class="notice-body">{{ text }}</p>
+    {% if dismissible %}
+    <button type="button" class="toast-close" aria-label="Dismiss">
+        <svg class="toast-close-ico" aria-hidden="true"><use href="#i-close"/></svg>
+    </button>
+    {% endif %}
+</div>

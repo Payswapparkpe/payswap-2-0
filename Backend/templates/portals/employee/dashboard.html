@@ -1,0 +1,31 @@
+{% extends "layouts/employee.html" %}
+{% block heading %}My desk{% endblock %}
+{% block content %}
+<section class="grid work-grid" aria-label="My queue">
+    <a class="card work-tile" href="/employee/queue/">
+        <span class="muted">KYC reviews</span>
+        <strong>{{ queue.kyc_reviews }}</strong>
+        <span>Identity checks waiting on you</span>
+    </a>
+    <a class="card work-tile" href="/employee/queue/">
+        <span class="muted">KYB reviews</span>
+        <strong>{{ queue.kyb_reviews }}</strong>
+        <span>Business verification cases</span>
+    </a>
+    <a class="card work-tile" href="/employee/queue/">
+        <span class="muted">Clarifications</span>
+        <strong>{{ queue.clarifications }}</strong>
+        <span>Merchants waiting on a reply</span>
+    </a>
+    <a class="card work-tile" href="/employee/orders/">
+        <span class="muted">Orders awaiting review</span>
+        <strong>{{ queue.orders }}</strong>
+        <span>Maker-checker review</span>
+    </a>
+</section>
+{% if queue.kyc_reviews == 0 and queue.kyb_reviews == 0 and queue.clarifications == 0 and queue.orders == 0 %}
+{% include "partials/empty.html" with art="check" title="Everything assigned to you is complete" body="Open the queue when new cases are routed to your department." cta="Open queue" cta_href="/employee/queue/" %}
+{% else %}
+<p class="action-row"><a class="btn" href="/employee/queue/">Open queue</a></p>
+{% endif %}
+{% endblock %}

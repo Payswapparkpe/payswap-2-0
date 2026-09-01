@@ -1,0 +1,6 @@
+{{ product }}
+
+Order cancelled
+{{ body|default:"Your payment order was cancelled." }}
+{% if reference %}Reference: {{ reference }}
+{% endif %}{{ action_url }}

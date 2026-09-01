@@ -1,0 +1,16 @@
+<div class="nav-user">
+    <div class="nav-user-card">
+        <span class="avatar" aria-hidden="true">{{ request.user.initials }}</span>
+        <span class="nav-user-copy">
+            <strong>{{ request.user.display_name }}</strong>
+            <small>{{ request.user.get_user_type_display }}</small>
+        </span>
+    </div>
+    <form class="nav-logout" method="post" action="{{ logout_url }}">
+        {% csrf_token %}
+        <button type="submit" title="Sign out">
+            <svg class="nav-ico" aria-hidden="true"><use href="#i-logout"/></svg>
+            <span>Sign out</span>
+        </button>
+    </form>
+</div>

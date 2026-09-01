@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ product }}</title>
+</head>
+<body style="margin:0;padding:0;background:#eef1f6;font-family:'Segoe UI',Arial,sans-serif;color:#121826;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#eef1f6;padding:24px 12px;">
+        <tr>
+            <td align="center">
+                <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #d5dde8;">
+                    <tr>
+                        <td style="background:#0c3260;color:#ffffff;padding:20px 28px;font-size:18px;font-weight:700;">
+                            {{ product }}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding:28px;">
+                            {% block content %}{% endblock %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding:16px 28px 24px;color:#5b6578;font-size:12px;border-top:1px solid #eef1f6;">
+                            Dear {{ user.name|default:user.email|default:email }}, this message was sent to {{ user.email|default:email }}.
+                            Do not forward one-time codes. If you did not expect this email, sign in and review sessions.
+                            {% if legal_entity %}<br>{{ legal_entity }}{% endif %}
+                            {% if grievance_officer %} · {{ grievance_officer }}{% endif %}
+                            {% if grievance_email %}<br><a href="mailto:{{ grievance_email }}" style="color:#164e8a;">{{ grievance_email }}</a>{% endif %}
+                            {% if grievance_address %}<br>Postal address: {{ grievance_address }}{% endif %}
+                            {% if support_url %}<br><a href="{{ support_url }}" style="color:#164e8a;">Support</a>{% endif %}
+                            {% if preference_url %}<br><a href="{{ preference_url }}" style="color:#164e8a;">Notification preferences</a>{% endif %}
+                            <br><a href="{{ home_url }}" style="color:#164e8a;">{{ home_url }}</a>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

@@ -1,0 +1,7 @@
+{% extends "emails/layout.html" %}
+{% block content %}
+<h1 style="margin:0 0 12px;font-size:22px;">Agreement ready</h1>
+<p style="margin:0 0 16px;line-height:1.5;">{{ body|default:"Please review and sign your service agreement." }}</p>
+{% if reference %}<p style="margin:0 0 8px;color:#5b6578;">Agreement: {{ reference }}</p>{% endif %}
+{% include "emails/_cta.html" %}
+{% endblock %}

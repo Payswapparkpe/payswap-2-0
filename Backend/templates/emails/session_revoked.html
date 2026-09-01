@@ -1,0 +1,6 @@
+{% extends "emails/layout.html" %}
+{% block content %}
+<h1 style="margin:0 0 12px;font-size:22px;">Session revoked</h1>
+<p style="margin:0 0 16px;line-height:1.5;">A signed-in session for {{ user.email }} was revoked. Other devices are not affected unless you revoke them too.</p>
+{% include "emails/_cta.html" %}
+{% endblock %}

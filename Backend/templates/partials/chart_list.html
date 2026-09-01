@@ -1,0 +1,14 @@
+{% if rows %}
+<div class="chart-list" role="list" aria-label="{{ title }}">
+    {% for row in rows %}
+    <div class="chart-row" role="listitem">
+        <span class="chart-label">{% firstof row.label row.status %}</span>
+        <div class="chart-track" aria-hidden="true"><span class="chart-fill" style="--w: {{ row.pct }}%"></span></div>
+        <strong class="chart-value">{% firstof row.total row.value %}</strong>
+    </div>
+    {% endfor %}
+</div>
+<p class="muted">Bar length is relative to the largest category; the number is the exact count.</p>
+{% else %}
+<p class="muted">No data yet.</p>
+{% endif %}

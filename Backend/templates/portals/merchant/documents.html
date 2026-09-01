@@ -1,0 +1,104 @@
+{% extends "layouts/merchant.html" %}
+{% block heading %}Documents{% endblock %}
+{% block subhead %}Upload supporting files. Identifiers must match your business profile at {{ match_threshold }}% or more.{% endblock %}
+{% block content %}
+{% if profile_gaps %}
+<div class="banner banner-warn" role="status">
+    <svg class="notice-ico" aria-hidden="true"><use href="#i-alert"/></svg>
+    <p class="notice-body">Complete {{ profile_gaps|join:", " }} in <a href="/merchant/onboarding/">onboarding</a> (or your <a href="/merchant/profile/">business profile</a>) before uploading identity documents.</p>
+    <button type="button" class="toast-close" aria-label="Dismiss">
+        <svg class="toast-close-ico" aria-hidden="true"><use href="#i-close"/></svg>
+    </button>
+</div>
+{% endif %}
+<div class="profile-grid">
+<form class="paper-sheet form-card" method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <div class="card-head">
+        <div>
+            <h2>Upload document</h2>
+            <p class="muted">Files are checked against the business profile.</p>
+        </div>
+        <svg class="sheet-ico" aria-hidden="true"><use href="#i-clip"/></svg>
+    </div>
+    <label class="field">
+        <span class="field-title">Type <span class="required-mark">*</span></span>
+        <span class="field-control">
+            <svg class="field-control-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-file"/></svg>
+            <select name="doc_type">
+                <option value="PAN">PAN Card</option>
+                <option value="GST">GST Certificate</option>
+                <option value="AADHAAR">Aadhaar</option>
+                <option value="COI">Certificate of Incorporation</option>
+                <option value="BANK_PROOF">Bank Proof</option>
+            </select>
+        </span>
+    </label>
+    <label class="field">
+        <span class="field-title">Document number <span class="required-mark">*</span></span>
+        <span class="field-control">
+            <svg class="field-control-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-clip"/></svg>
+            <input name="document_number" placeholder="Enter document number" autocomplete="off" required>
+        </span>
+    </label>
+    <label class="field">
+        <span class="field-title">Name as on document</span>
+        <span class="field-control">
+            <svg class="field-control-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-user"/></svg>
+            <input name="holder_name" placeholder="Enter name" autocomplete="name">
+        </span>
+    </label>
+    <label class="field">
+        <span class="field-title">File <span class="required-mark">*</span></span>
+        <input type="file" name="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png">
+    </label>
+    <button type="submit">Upload</button>
+</form>
+<section class="paper-sheet">
+    <div class="card-head">
+        <div>
+            <h2>On file</h2>
+            <p class="muted">Match is calculated from PAN, GSTIN, CIN/LLPIN, Aadhaar, or bank account on your profile.</p>
+        </div>
+        <svg class="sheet-ico" aria-hidden="true"><use href="#i-file"/></svg>
+    </div>
+    {% if document_rows %}
+    <div class="table-wrap">
+        <table class="js-datatable display nowrap w-100">
+            <thead><tr><th>Type</th><th>ID</th><th>Match</th><th>Status</th><th>File</th></tr></thead>
+            <tbody>
+            {% for row in document_rows %}
+            <tr>
+                <td>{{ row.document.get_doc_type_display }}</td>
+                <td>{{ row.document.public_id }}</td>
+                <td>
+                    {% if row.match %}
+                    <span class="match-meter">
+                        <span class="match-bar" aria-hidden="true"><span style="--w: {{ row.match.score }}%"></span></span>
+                        {{ row.match.score }}%
+                    </span>
+                    {% else %}—{% endif %}
+                </td>
+                <td><span class="badge {% if row.document.status == 'VERIFIED' %}ok{% elif row.document.status == 'REJECTED' or row.document.status == 'ACTION_REQUIRED' %}warn{% else %}neutral{% endif %}">{{ row.document.get_status_display }}</span>
+                    {% if row.document.rejection_reason %}<div class="muted doc-reason">{{ row.document.rejection_reason }}</div>{% endif %}
+                </td>
+                <td>{% if row.document.file %}
+                    <form method="post" action="/merchant/documents/{{ row.document.public_id }}/download/">
+                        {% csrf_token %}
+                        <button type="submit" class="secondary">Download</button>
+                    </form>
+                    {% if row.document.status == 'REJECTED' or row.document.status == 'ACTION_REQUIRED' %}
+                    <p class="help">Re-upload a corrected file using the form on the left.</p>
+                    {% endif %}
+                {% else %}—{% endif %}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    {% include "partials/empty.html" with art="clip" title="No documents yet" body="Complete onboarding business details, then upload PAN, GST, or bank proof that matches those identifiers." %}
+    {% endif %}
+</section>
+</div>
+{% endblock %}

@@ -1,0 +1,6 @@
+{{ product }}
+
+Application not approved
+{{ body|default:"Your merchant application was not approved. Sign in to read the reason and next steps." }}
+{% if reference %}Reference: {{ reference }}
+{% endif %}{{ action_url }}

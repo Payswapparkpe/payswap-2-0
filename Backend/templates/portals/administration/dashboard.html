@@ -1,0 +1,54 @@
+{% extends "layouts/administration.html" %}
+{% block heading %}Overview{% endblock %}
+{% block content %}
+<section class="grid kpis" aria-label="Business overview">
+    {% for kpi in kpis %}
+    <a class="card kpi" href="{{ kpi.url }}">
+        <div class="kpi-label">{{ kpi.label }}</div>
+        <div class="value">{{ kpi.value }}</div>
+        <span class="kpi-link">Open workspace</span>
+        <span class="spark" aria-hidden="true"></span>
+    </a>
+    {% endfor %}
+</section>
+<section class="card chart-card mt-5">
+    <div class="card-head">
+        <div>
+            <h2>Volume mix</h2>
+            <p class="muted">Relative size of each dashboard metric.</p>
+        </div>
+    </div>
+    {% include "partials/chart_list.html" with rows=kpis title="Volume mix" %}
+</section>
+<section class="card attention mt-5">
+    <div class="card-head">
+        <div>
+            <h2>Needs attention</h2>
+            <p class="muted">Highest-priority queues across onboarding, payments, and security.</p>
+        </div>
+    </div>
+    {% if attention %}
+    <div class="table-wrap">
+        <table class="js-datatable display nowrap w-100" data-table-export="true">
+            <thead>
+                <tr><th>Priority</th><th>Item</th><th>Age</th><th>Owner</th><th>Status</th><th></th></tr>
+            </thead>
+            <tbody>
+                {% for item in attention %}
+                <tr>
+                    <td><span class="badge warn">{{ item.priority }}</span></td>
+                    <td>{{ item.label }} · {{ item.ref }}</td>
+                    <td>{{ item.age }}</td>
+                    <td>{{ item.owner }}</td>
+                    <td><span class="badge">{{ item.status }}</span></td>
+                    <td><a class="btn ghost" href="{{ item.url }}">Open</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    {% include "partials/empty.html" with art="check" title="Queues are clear" body="New reviews appear here when merchants submit work." %}
+    {% endif %}
+</section>
+{% endblock %}

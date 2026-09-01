@@ -1,0 +1,24 @@
+{% extends "layouts/administration.html" %}
+{% block heading %}Onboarding{% endblock %}
+{% block content %}
+{% if applications %}
+<div class="card table-wrap">
+<table>
+    <thead><tr><th>Application ID</th><th>Merchant</th><th>Status</th><th>Submitted</th></tr></thead>
+    <tbody>
+    {% for application in applications %}
+    <tr>
+        <td><a href="/administration/merchants/{{ application.merchant.public_id }}/">{{ application.public_id }}</a></td>
+        <td>{{ application.merchant.business_name }}</td>
+        <td>{{ application.get_status_display }}</td>
+        <td>{{ application.submitted_at|default:"—" }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+{% include "partials/pager.html" %}
+{% else %}
+{% include "partials/empty.html" with art="clip" title="Onboarding queue is clear" body="No pending merchant reviews. Everything assigned is complete." %}
+{% endif %}
+{% endblock %}

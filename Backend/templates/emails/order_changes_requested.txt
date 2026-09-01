@@ -1,0 +1,6 @@
+{{ product }}
+
+Changes requested
+{{ body|default:"Changes were requested on your order. Sign in to update it." }}
+{% if reference %}Reference: {{ reference }}
+{% endif %}{{ action_url }}

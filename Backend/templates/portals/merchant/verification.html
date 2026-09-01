@@ -1,0 +1,138 @@
+{% extends "layouts/merchant.html" %}
+{% block heading %}Verification{% endblock %}
+{% block subhead %}Checks use details already collected in onboarding. Nothing is typed twice.{% endblock %}
+{% block content %}
+{% if merchant %}
+<section class="status-strip" aria-label="Verification rollup">
+    <div class="status-chip">
+        <span class="muted">KYC</span>
+        <span class="badge {% if merchant.kyc_status == 'VERIFIED' %}ok{% elif merchant.kyc_status == 'ACTION_REQUIRED' or merchant.kyc_status == 'REJECTED' %}danger{% elif merchant.kyc_status == 'PENDING' %}info{% else %}neutral{% endif %}">{{ merchant.get_kyc_status_display }}</span>
+    </div>
+    <div class="status-chip">
+        <span class="muted">KYB</span>
+        <span class="badge {% if merchant.kyb_status == 'VERIFIED' %}ok{% elif merchant.kyb_status == 'ACTION_REQUIRED' or merchant.kyb_status == 'REJECTED' %}danger{% elif merchant.kyb_status == 'PENDING' %}info{% else %}neutral{% endif %}">{{ merchant.get_kyb_status_display }}</span>
+    </div>
+    <div class="status-chip">
+        <span class="muted">Bank</span>
+        <span class="badge {% if merchant.bank_status == 'VERIFIED' %}ok{% elif merchant.bank_status == 'ACTION_REQUIRED' or merchant.bank_status == 'REJECTED' %}danger{% elif merchant.bank_status == 'PENDING' %}info{% else %}neutral{% endif %}">{{ merchant.get_bank_status_display }}</span>
+    </div>
+    <div class="status-chip">
+        <span class="muted">Agreement</span>
+        <span class="badge {% if merchant.agreement_status == 'VERIFIED' %}ok{% elif merchant.agreement_status == 'PENDING' %}info{% else %}neutral{% endif %}">{{ merchant.get_agreement_status_display }}</span>
+    </div>
+</section>
+{% endif %}
+
+{% if collected %}
+<section class="card form-card">
+    <div class="card-head">
+        <div>
+            <h2>Collected details</h2>
+            <p class="muted">Masked identifiers stored from your application.</p>
+        </div>
+    </div>
+    <dl class="kv">
+        <div><dt>Legal name</dt><dd>{{ collected.legal_name|default:"—" }}</dd></div>
+        <div><dt>PAN</dt><dd>{{ collected.pan|default:"—" }}</dd></div>
+        <div><dt>GSTIN</dt><dd>{{ collected.gstin|default:"—" }}</dd></div>
+        <div><dt>Signatory</dt><dd>{{ collected.owner_name|default:"—" }}</dd></div>
+        <div><dt>Date of birth</dt><dd>{{ collected.owner_dob|default:"—" }}</dd></div>
+        <div><dt>Aadhaar</dt><dd>{{ collected.aadhaar|default:"Not provided" }}</dd></div>
+        <div><dt>Account</dt><dd>{{ collected.account_number|default:"—" }}</dd></div>
+        <div><dt>IFSC</dt><dd>{{ collected.ifsc|default:"—" }}</dd></div>
+    </dl>
+    <form method="post" class="mt-3">
+        {% csrf_token %}
+        <button type="submit" name="action" value="verify_collected">Verify collected details</button>
+    </form>
+    <p class="help">PAN needs name and date of birth from People. Bank uses the encrypted account saved in onboarding. Results are reused for 30 days.</p>
+</section>
+{% else %}
+{% include "partials/empty.html" with art="store" title="Start onboarding first" body="PAN, GSTIN, and bank details are collected once in the application, then verified from this page." cta="Start onboarding" cta_href="/merchant/onboarding/" %}
+{% endif %}
+
+<div class="grid grid-auto mt-3">
+<section class="card form-card">
+    <div class="card-head">
+        <div>
+            <h2>PAN</h2>
+            <p class="muted">Name and date of birth from the application.</p>
+        </div>
+        {% include "partials/verification_badge.html" with record=records.PAN rollup=merchant.kyc_status %}
+    </div>
+    {% include "partials/verification_card.html" with record=records.PAN rollup=merchant.kyc_status %}
+</section>
+
+<section class="card form-card">
+    <div class="card-head">
+        <div>
+            <h2>GSTIN</h2>
+            <p class="muted">GST registration for the legal entity.</p>
+        </div>
+        {% include "partials/verification_badge.html" with record=records.GSTIN rollup=merchant.kyb_status %}
+    </div>
+    {% include "partials/verification_card.html" with record=records.GSTIN rollup=merchant.kyb_status %}
+</section>
+
+<section class="card form-card">
+    <div class="card-head">
+        <div>
+            <h2>Bank account</h2>
+            <p class="muted">Account number and IFSC collected in onboarding.</p>
+        </div>
+        {% include "partials/verification_badge.html" with record=records.BANK_ACCOUNT rollup=merchant.bank_status %}
+    </div>
+    {% include "partials/verification_card.html" with record=records.BANK_ACCOUNT rollup=merchant.bank_status %}
+</section>
+
+<section class="card form-card">
+    <div class="card-head">
+        <div>
+            <h2>IFSC</h2>
+            <p class="muted">Branch metadata for the settlement IFSC.</p>
+        </div>
+        {% include "partials/verification_badge.html" with record=records.IFSC rollup=merchant.bank_status %}
+    </div>
+    {% include "partials/verification_card.html" with record=records.IFSC rollup=merchant.bank_status %}
+</section>
+
+<section class="card form-card">
+    <div class="card-head">
+        <div>
+            <h2>Aadhaar</h2>
+            <p class="muted">DigiLocker only, with explicit consent.</p>
+        </div>
+        {% include "partials/verification_badge.html" with record=records.AADHAAR %}
+    </div>
+    {% include "partials/verification_card.html" with record=records.AADHAAR %}
+    {% if pending_aadhaar %}
+    <p class="help">DigiLocker consent is in progress. Finish it in the DigiLocker window, then check the status.</p>
+    <form method="post" class="mt-3">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="refresh_aadhaar">
+        <input type="hidden" name="record" value="{{ pending_aadhaar.public_id }}">
+        <button type="submit" class="secondary">Check status</button>
+    </form>
+    {% elif collected.has_aadhaar %}
+    <form method="post" class="mt-3" novalidate data-validate-form>
+        {% csrf_token %}
+        <input type="hidden" name="action" value="start_aadhaar">
+        <label class="field field-check">
+            <input type="checkbox" name="consent" value="yes" required>
+            I consent to PayswapHub fetching Aadhaar details from DigiLocker for identity verification.
+        </label>
+        <button type="submit">Continue to DigiLocker</button>
+    </form>
+    <p class="help">Uses the Aadhaar number saved in onboarding ({{ collected.aadhaar }}).</p>
+    {% else %}
+    <p class="help">Add an Aadhaar number on the People step if you want DigiLocker verification.</p>
+    {% endif %}
+</section>
+</div>
+
+{% if merchant and merchant.kyc_status == "VERIFIED" and merchant.kyb_status == "VERIFIED" and merchant.bank_status == "VERIFIED" %}
+<p class="action-row mt-3">
+    <a class="btn" href="/merchant/agreements/">Continue to agreements</a>
+</p>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,35 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Legal{% endblock %}</title>
+    {% include "partials/brand_meta.html" %}
+    <link rel="stylesheet" href="{% static 'css/app.css' %}">
+</head>
+<body class="portal-public">
+    {% include "partials/icons.html" %}
+    {% include "partials/flash.html" %}
+    <a class="skip-link" href="#content">Skip to content</a>
+    <main class="legal-shell" id="content">
+        <header class="legal-header">
+            <img class="brand-logo legal-logo" src="{% static 'images/logo/payswap.png' %}" alt="payswap">
+            <p class="eyebrow">Power of Banking</p>
+            <h1>{% block heading %}{% endblock %}</h1>
+            <p class="muted">Last updated: 16 August 2026 · Applies to this web application.</p>
+            <nav class="legal-nav">
+                <a href="/legal/privacy/">Privacy</a>
+                <a href="/legal/terms/">Terms</a>
+                <a href="/legal/cookies/">Cookies</a>
+            </nav>
+        </header>
+        <article class="card legal-doc">
+            {% block content %}{% endblock %}
+        </article>
+        {% include "partials/legal_footer.html" %}
+    </main>
+    {% include "partials/cookie_banner.html" %}
+    <script src="{% static 'js/app.js' %}"></script>
+</body>
+</html>

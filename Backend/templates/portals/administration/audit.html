@@ -1,0 +1,26 @@
+{% extends "layouts/administration.html" %}
+{% block heading %}Audit{% endblock %}
+{% block content %}
+<form method="get" class="card mb-3">
+    <label class="field">Action <input name="action" value="{{ request.GET.action }}" placeholder="Enter action"></label>
+    <label class="field">Result <input name="result" value="{{ request.GET.result }}" placeholder="Enter result"></label>
+    <label class="field">From <input type="text" name="from" value="{{ request.GET.from }}" data-datepicker placeholder="Enter date" autocomplete="off"></label>
+    <button type="submit">Filter</button>
+</form>
+{% if events %}
+<div class="card table-wrap"><table>
+<thead><tr><th>Time</th><th>Actor</th><th>Action</th><th>Resource</th><th>Result</th></tr></thead>
+<tbody>
+{% for event in events %}
+<tr>
+    <td>{{ event.created_at }}</td>
+    <td>{{ event.actor }}</td>
+    <td>{{ event.action }}</td>
+    <td>{{ event.resource_type }} {{ event.resource_id }}</td>
+    <td>{{ event.result }}</td>
+</tr>
+{% endfor %}
+</tbody></table></div>
+{% include "partials/pager.html" %}
+{% else %}{% include "partials/empty.html" with art="shield" title="No matching audit events" body="Try a different action or result, or wait for privileged activity." %}{% endif %}
+{% endblock %}

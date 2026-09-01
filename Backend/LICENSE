@@ -1,0 +1,350 @@
+PAYSWAPHUB PROPRIETARY SOFTWARE LICENSE
+Version 1.0
+Copyright © 2026 PayswapHub. All Rights Reserved.
+
+Effective Date: August 16, 2026
+
+
+1. DEFINITIONS
+
+For the purposes of this License:
+
+"Software" means the PayswapHub application, source code, object code, binaries,
+configuration, documentation, scripts, templates, assets, database structures,
+APIs, integrations, and related materials distributed with this License.
+
+"Licensor" means PayswapHub and its authorized owners, operators, or licensors.
+
+"Licensee" means the individual or legal entity that has received authorized
+access to the Software.
+
+"Authorized Use" means use of the Software solely for the business purpose,
+environment, organization, tenant, or deployment explicitly authorized by the
+Licensor.
+
+"Confidential Information" means non-public information relating to the Software,
+architecture, source code, security controls, credentials, APIs, integrations,
+business logic, financial systems, customer information, merchant information,
+documentation, and operational processes.
+
+
+2. OWNERSHIP
+
+The Software is proprietary software and remains the exclusive property of the
+Licensor and/or its applicable third-party licensors.
+
+Nothing in this License transfers ownership, copyright, intellectual property
+rights, trademarks, patents, trade secrets, or other proprietary rights to the
+Licensee.
+
+All rights not expressly granted under this License are reserved by the Licensor.
+
+
+3. LIMITED LICENSE
+
+Subject to compliance with this License, the Licensor grants the Licensee a
+limited, non-exclusive, non-transferable, non-sublicensable, revocable license
+to use the Software solely for Authorized Use.
+
+The Licensee may:
+
+- Install the Software on authorized systems.
+- Configure the Software for Authorized Use.
+- Run the Software in authorized development, testing, staging, and production
+  environments.
+- Make reasonable configuration changes required for Authorized Use.
+- Make internal modifications where explicitly permitted by the Licensor.
+
+The License does not grant any ownership rights in the Software.
+
+
+4. RESTRICTIONS
+
+Unless expressly authorized in writing by the Licensor, the Licensee shall NOT:
+
+- Sell the Software.
+- Resell the Software.
+- Rent, lease, or sublicense the Software.
+- Distribute the Software.
+- Publish the Software or source code.
+- Upload the Software to public repositories.
+- Make the Software publicly available.
+- Provide unauthorized third-party access.
+- Copy the Software beyond reasonable backup requirements.
+- Reverse engineer the Software.
+- Decompile or disassemble the Software.
+- Attempt to discover source code or proprietary algorithms.
+- Remove copyright, license, trademark, or proprietary notices.
+- Circumvent authentication or authorization controls.
+- Circumvent security mechanisms.
+- Bypass licensing or usage restrictions.
+- Use the Software to create an unauthorized competing product.
+- Use proprietary business logic for an unauthorized competing service.
+- Extract, reproduce, or redistribute proprietary APIs or integrations.
+- Use confidential technical information to develop unauthorized derivative
+  products.
+
+
+5. SOURCE CODE
+
+Access to source code does not constitute transfer of ownership.
+
+The Licensee shall protect source code using reasonable administrative,
+technical, and organizational security controls.
+
+Source code shall not be:
+
+- Published publicly.
+- Uploaded to public Git repositories.
+- Shared with unauthorized individuals.
+- Distributed outside the authorized organization.
+- Included in public software packages.
+
+Production credentials, encryption keys, API secrets, private certificates,
+database credentials, and other secrets must never be committed to source
+control.
+
+
+6. MODIFICATIONS
+
+Unless separately agreed in writing, modifications made by the Licensee are
+made at the Licensee's own risk.
+
+The Licensee shall not remove proprietary notices from modified versions.
+
+The Licensor may require that modifications affecting security, payment
+processing, financial calculations, authentication, authorization, or core
+business logic be reviewed before deployment to an environment controlled by
+the Licensor.
+
+
+7. THIRD-PARTY SOFTWARE
+
+The Software may contain or depend upon third-party software, open-source
+software, libraries, frameworks, APIs, fonts, or services.
+
+Such components remain subject to their respective licenses.
+
+Where applicable, third-party licenses take precedence over this License for
+the specific third-party component.
+
+The Licensee is responsible for complying with applicable third-party license
+requirements for components introduced or independently distributed by the
+Licensee.
+
+
+8. SECURITY
+
+The Licensee shall maintain appropriate security controls when operating the
+Software.
+
+At a minimum, the Licensee should:
+
+- Protect authentication credentials.
+- Enable appropriate multi-factor authentication.
+- Restrict administrative access.
+- Use HTTPS/TLS for production communications.
+- Protect encryption keys.
+- Protect database credentials.
+- Maintain secure backups.
+- Apply security updates.
+- Monitor security events.
+- Review audit logs.
+- Restrict access according to least privilege.
+- Prevent unauthorized access to production systems.
+
+Security vulnerabilities discovered in the Software should be reported
+responsibly to the Licensor and should not be publicly disclosed before a
+reasonable opportunity for remediation.
+
+
+9. CONFIDENTIALITY
+
+The Licensee shall keep Confidential Information confidential and shall use it
+only for Authorized Use.
+
+The Licensee shall take reasonable measures to prevent unauthorized disclosure,
+access, copying, or distribution of Confidential Information.
+
+Confidentiality obligations survive termination of this License for information
+that remains confidential or constitutes a trade secret under applicable law.
+
+
+10. DATA PROTECTION
+
+The Software may process personal, financial, merchant, customer, transaction,
+identity, and other sensitive information.
+
+The Licensee is responsible for operating the Software in compliance with all
+applicable privacy, data-protection, financial, cybersecurity, regulatory, and
+industry requirements applicable to its use.
+
+The Licensee shall not use the Software to unlawfully collect, process,
+disclose, or retain personal or financial information.
+
+
+11. FINANCIAL SERVICES DISCLAIMER
+
+PayswapHub may provide technology supporting payment, banking, voucher,
+recharge, merchant, and other financial-service workflows.
+
+The Software itself does not automatically constitute a bank, payment system
+operator, financial institution, regulated entity, or licensed financial
+service.
+
+Any regulated financial activity must be performed only by appropriately
+licensed, authorized, and compliant entities.
+
+The Licensee is solely responsible for determining and maintaining its
+regulatory obligations applicable to its deployment and business activities.
+
+
+12. NO WARRANTY
+
+TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, THE SOFTWARE IS PROVIDED
+"AS IS" AND "AS AVAILABLE", WITHOUT WARRANTIES OF ANY KIND, WHETHER EXPRESS,
+IMPLIED, STATUTORY, OR OTHERWISE.
+
+THE LICENSOR DISCLAIMS WARRANTIES INCLUDING, WITHOUT LIMITATION:
+
+- MERCHANTABILITY.
+- FITNESS FOR A PARTICULAR PURPOSE.
+- NON-INFRINGEMENT.
+- AVAILABILITY.
+- ACCURACY.
+- RELIABILITY.
+- SECURITY.
+- ERROR-FREE OPERATION.
+
+The Licensor does not warrant that the Software will operate continuously,
+without interruption, or without defects.
+
+
+13. PRODUCTION AND OPERATIONAL RESPONSIBILITY
+
+The Licensee is responsible for its deployment environment, infrastructure,
+network, database, credentials, backups, monitoring, integrations, and
+operational procedures unless otherwise agreed in writing.
+
+The Licensee must independently validate the Software before using it for
+production, financial, payment, or regulated workloads.
+
+
+14. LIMITATION OF LIABILITY
+
+TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, THE LICENSOR SHALL NOT BE
+LIABLE FOR INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, CONSEQUENTIAL, OR
+PUNITIVE DAMAGES, OR FOR LOSS OF PROFITS, REVENUE, BUSINESS, DATA, GOODWILL,
+OR EXPECTED SAVINGS ARISING FROM OR RELATED TO THE SOFTWARE.
+
+TO THE EXTENT LIABILITY CANNOT BE EXCLUDED, THE LICENSOR'S TOTAL AGGREGATE
+LIABILITY ARISING FROM THIS LICENSE SHALL BE LIMITED TO THE AMOUNT ACTUALLY
+PAID BY THE LICENSEE TO THE LICENSOR FOR THE SOFTWARE DURING THE TWELVE (12)
+MONTHS PRECEDING THE EVENT GIVING RISE TO THE CLAIM, UNLESS OTHERWISE
+REQUIRED BY APPLICABLE LAW OR EXPRESSLY AGREED IN WRITING.
+
+
+15. INDEMNIFICATION
+
+To the extent permitted by applicable law, the Licensee agrees to indemnify
+and hold harmless the Licensor from claims, damages, liabilities, costs, and
+expenses arising from:
+
+- Unauthorized use of the Software.
+- Violation of this License.
+- Violation of applicable law.
+- Unauthorized access caused by the Licensee.
+- Misuse of the Software.
+- Unauthorized modification or distribution.
+- The Licensee's business operations or financial services.
+- Third-party services or integrations controlled by the Licensee.
+
+
+16. AUDIT AND COMPLIANCE
+
+The Licensor may, where reasonably necessary and subject to applicable law,
+verify compliance with this License.
+
+The Licensee shall maintain reasonable records demonstrating authorized use,
+access controls, and compliance where required by the applicable commercial
+agreement.
+
+
+17. TERMINATION
+
+This License terminates automatically if the Licensee materially breaches its
+terms and fails to remedy the breach within a reasonable period after receiving
+written notice, where applicable.
+
+Upon termination, the Licensee shall:
+
+- Stop using the Software.
+- Stop distributing the Software.
+- Remove unauthorized copies.
+- Return or securely destroy Confidential Information where required.
+- Remove the Software from unauthorized systems.
+
+Termination does not affect rights or obligations that by their nature survive
+termination.
+
+
+18. RESERVATION OF RIGHTS
+
+All rights not expressly granted under this License are reserved by the
+Licensor.
+
+No implied license is granted through distribution, access to source code,
+documentation, APIs, demonstrations, or other materials.
+
+
+19. TRADEMARKS
+
+PayswapHub, Payswap, associated names, logos, product names, service names,
+branding, and related marks may be trademarks or proprietary marks of the
+Licensor or their respective owners.
+
+This License does not grant permission to use such marks except as expressly
+authorized in writing.
+
+
+20. GOVERNING LAW
+
+This License shall be governed by and interpreted in accordance with the laws
+applicable to the Licensor's principal jurisdiction, unless a separate written
+agreement specifies otherwise.
+
+Any dispute shall be subject to the jurisdiction and dispute-resolution
+mechanism specified in the applicable commercial agreement.
+
+
+21. SEVERABILITY
+
+If any provision of this License is found to be invalid or unenforceable, the
+remaining provisions shall remain in full force and effect.
+
+
+22. ENTIRE AGREEMENT
+
+This License constitutes the complete license terms for the Software unless
+superseded or supplemented by a separate written agreement signed by the
+parties.
+
+Additional commercial, subscription, support, SLA, implementation, or enterprise
+terms may apply separately.
+
+
+23. NO ASSIGNMENT
+
+The Licensee may not assign, transfer, sublicense, or otherwise transfer this
+License or its rights under this License without prior written authorization
+from the Licensor, except where such restriction is prohibited by applicable
+law.
+
+
+24. CONTACT
+
+For licensing, commercial, security, or legal inquiries, contact the
+authorized PayswapHub representative designated for the applicable deployment.
+
+Copyright © 2026 PayswapHub.
+All Rights Reserved.

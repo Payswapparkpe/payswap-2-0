@@ -1,0 +1,7 @@
+{% extends "emails/layout.html" %}
+{% block content %}
+<h1 style="margin:0 0 12px;font-size:22px;">Verify your email</h1>
+<p style="margin:0 0 16px;line-height:1.5;">Use this code in {{ product }}. It expires in 10 minutes.</p>
+<p style="margin:0;font-size:32px;letter-spacing:8px;font-weight:700;background:#e8f0fa;padding:16px;text-align:center;border-radius:12px;">{{ code }}</p>
+<p style="margin:16px 0 0;color:#5b6578;font-size:13px;">Never share this code. {{ product }} staff will not ask for it.</p>
+{% endblock %}

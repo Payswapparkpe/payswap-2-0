@@ -1,0 +1,6 @@
+{{ product }}
+
+Order submitted
+{{ body|default:"Your payment order was submitted for review." }}
+{% if reference %}Order: {{ reference }}
+{% endif %}{{ action_url }}

@@ -1,0 +1,19 @@
+{% extends "legal/base.html" %}
+{% block title %}Grievance officer{% endblock %}
+{% block heading %}Grievance officer{% endblock %}
+{% block content %}
+<p>In accordance with the Information Technology Act, 2000, the IT Rules, 2021, and the Digital Personal Data Protection Act, 2023, you may raise complaints about content, privacy, or access to this platform.</p>
+<h2>How to complain</h2>
+<ol>
+    <li>Sign in and send an in-app message, or open a support ticket if you are a merchant.</li>
+    {% if grievance_email %}<li>Email the grievance officer at <a href="mailto:{{ grievance_email }}">{{ grievance_email }}</a> with your account email, merchant ID if any, and a description of the issue.</li>{% endif %}
+    <li>We aim to acknowledge within 24 hours and resolve or explain the outcome within 15 days, unless a longer statutory period applies.</li>
+</ol>
+<h2>Officer</h2>
+{% if grievance_officer_name and grievance_email and grievance_postal_address %}
+<p>{{ grievance_officer_name }}<br>{{ grievance_postal_address }}</p>
+{% else %}
+<p>The appointed grievance-officer details are not configured in this development environment.</p>
+{% endif %}
+<p>Do not send voucher codes, full account numbers, or Aadhaar OTPs by email.</p>
+{% endblock %}

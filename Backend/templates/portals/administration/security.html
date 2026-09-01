@@ -1,0 +1,50 @@
+{% extends "layouts/administration.html" %}
+{% block heading %}Security{% endblock %}
+{% block subhead %}Failed logins, privileged actions, and session risk{% endblock %}
+{% block content %}
+<section class="card">
+    <h2>Failed logins (7 days)</h2>
+    {% for event in failed_logins %}
+    <p>{{ event.created_at }} · {{ event.email }} · {{ event.ip_address }}</p>
+    {% empty %}<p class="muted">No failed sign-in attempts in this period.</p>{% endfor %}
+    {% include "partials/pager.html" %}
+</section>
+<section class="card mt-3">
+    <h2>Account controls</h2>
+    <p class="muted">Each action is audited. Force logout ends the Django session, not only the tracking row.</p>
+    {% if managed_users %}
+    <div class="table-wrap"><table class="js-datatable display nowrap w-100" data-table-export="true">
+        <thead><tr><th>Email</th><th>Type</th><th>Active</th><th>MFA</th><th>Actions</th></tr></thead>
+        <tbody>
+        {% for person in managed_users %}
+        <tr>
+            <td>{{ person.email }}</td>
+            <td>{{ person.get_user_type_display }}</td>
+            <td><span class="badge {% if person.is_active %}ok{% else %}danger{% endif %}">{{ person.is_active|yesno:"Active,Suspended" }}</span></td>
+            <td><span class="badge {% if person.mfa_enforced %}ok{% else %}neutral{% endif %}">{{ person.mfa_enforced|yesno:"On,Off" }}</span></td>
+            <td>
+                <form method="post" action="/administration/security/users/{{ person.pk }}/" class="action-row">
+                    {% csrf_token %}
+                    <button type="submit" name="action" value="force_logout" class="secondary">Force logout</button>
+                    <button type="submit" name="action" value="reset_mfa" class="secondary">Reset MFA</button>
+                    {% if person.is_active %}
+                    <button type="submit" name="action" value="suspend" class="danger">Suspend</button>
+                    {% endif %}
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table></div>
+    {% include "partials/pager.html" with page=users_page page_param="upage" querystring=users_querystring %}
+    {% else %}
+    <p class="muted">No portal users to manage.</p>
+    {% endif %}
+</section>
+<section class="card mt-3">
+    <h2>Recent privileged actions</h2>
+    {% for event in privileged %}
+    <p>{{ event.created_at }} · {{ event.actor }} · {{ event.action }} · {{ event.resource_id }}</p>
+    {% empty %}<p class="muted">No privileged actions recorded.</p>{% endfor %}
+</section>
+{% endblock %}

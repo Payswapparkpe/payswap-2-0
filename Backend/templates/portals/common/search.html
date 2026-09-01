@@ -1,0 +1,20 @@
+{% extends shell_layout %}
+{% block heading %}Search{% endblock %}
+{% block subhead %}Results are limited to records you are allowed to see.{% endblock %}
+{% block content %}
+<form method="get" class="card toolbar">
+    <label class="field grow">Query <input name="q" value="{{ query }}" placeholder="Public ID, business name, or email"></label>
+    <button type="submit">Search</button>
+</form>
+{% if results %}
+<div class="result-list">
+    {% for item in results %}
+    <a class="card result" href="{{ item.url }}">{{ item.label }}</a>
+    {% endfor %}
+</div>
+{% elif query %}
+{% include "partials/empty.html" with art="search" title="No matches" body="No records match this search for your access level." %}
+{% else %}
+{% include "partials/empty.html" with art="search" title="Search this portal" body="Enter an ID or name. You will only see records in your permission scope." %}
+{% endif %}
+{% endblock %}

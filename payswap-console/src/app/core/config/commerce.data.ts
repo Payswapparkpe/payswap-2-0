@@ -1,0 +1,115 @@
+import { CatalogItem } from '../models/onboarding.models';
+import { DEFAULT_MARKET } from './market.config';
+
+export const BRAND_CATALOG: CatalogItem[] = [
+  {
+    id: 'cat_amazon',
+    brand: 'Amazon',
+    title: 'Amazon Pay Gift Card',
+    kind: 'brand_voucher',
+    denominations: [100, 250, 500, 1000, 2000, 5000],
+    category: 'E-commerce',
+    logo: '/brands/amazon.svg',
+    accent: '#FF9900',
+  },
+  {
+    id: 'cat_flipkart',
+    brand: 'Flipkart',
+    title: 'Flipkart e-Gift Voucher',
+    kind: 'brand_voucher',
+    denominations: [250, 500, 1000, 2000],
+    category: 'E-commerce',
+    logo: '/brands/flipkart.svg',
+    accent: '#2874F0',
+  },
+  {
+    id: 'cat_swiggy',
+    brand: 'Swiggy',
+    title: 'Swiggy Money',
+    kind: 'brand_voucher',
+    denominations: [200, 500, 1000],
+    category: 'Food',
+    logo: '/brands/swiggy.svg',
+    accent: '#FC8019',
+  },
+  {
+    id: 'cat_myntra',
+    brand: 'Myntra',
+    title: 'Myntra Gift Card',
+    kind: 'brand_voucher',
+    denominations: [500, 1000, 2000],
+    category: 'Fashion',
+    logo: '/brands/myntra.svg',
+    accent: '#FF3F6C',
+  },
+  {
+    id: 'cat_zomato',
+    brand: 'Zomato',
+    title: 'Zomato Gift Card',
+    kind: 'brand_voucher',
+    denominations: [200, 500, 1000],
+    category: 'Food',
+    logo: '/brands/zomato.svg',
+    accent: '#E23744',
+  },
+  {
+    id: 'cat_bms',
+    brand: 'BookMyShow',
+    title: 'BookMyShow Gift Card',
+    kind: 'brand_voucher',
+    denominations: [250, 500, 1000, 2000],
+    category: 'Entertainment',
+    logo: '/brands/bookmyshow.svg',
+    accent: '#C4242B',
+  },
+  {
+    id: 'cat_bigbasket',
+    brand: 'BigBasket',
+    title: 'BigBasket Gift Card',
+    kind: 'brand_voucher',
+    denominations: [500, 1000, 2000],
+    category: 'Grocery',
+    logo: '/brands/bigbasket.svg',
+    accent: '#84C225',
+  },
+  {
+    id: 'cat_nykaa',
+    brand: 'Nykaa',
+    title: 'Nykaa Gift Card',
+    kind: 'brand_voucher',
+    denominations: [500, 1000, 2000],
+    category: 'Beauty',
+    logo: '/brands/nykaa.svg',
+    accent: '#FC2779',
+  },
+  {
+    id: 'cat_meal',
+    brand: 'Payswap',
+    title: 'Corporate meal prepaid card',
+    kind: 'prepaid_card',
+    denominations: [1000, 2000, 5000],
+    category: 'Prepaid',
+    logo: '/brands/payswap.svg',
+    accent: '#5B3DF5',
+  },
+  {
+    id: 'cat_reward',
+    brand: 'Payswap',
+    title: 'Employee reward prepaid card',
+    kind: 'prepaid_card',
+    denominations: [500, 1000, 2500, 5000],
+    category: 'Prepaid',
+    logo: '/brands/payswap.svg',
+    accent: '#5B3DF5',
+  },
+];
+
+export const VOUCHER_CATEGORIES = ['All', 'E-commerce', 'Food', 'Fashion', 'Entertainment', 'Grocery', 'Beauty'];
+
+export function inr(amount: number): string {
+  return new Intl.NumberFormat(DEFAULT_MARKET.locale, {
+    style: 'currency',
+    currency: DEFAULT_MARKET.currency,
+    maximumFractionDigits: 0,
+  }).format(amount);
+}

@@ -1,0 +1,15 @@
+{% with pkey=page_param|default:"page" %}
+{% if page.has_other_pages %}
+<nav class="pager" aria-label="Pagination">
+    {% if page.has_previous %}
+    <a class="btn secondary" href="?{{ pkey }}=1{% if querystring %}&{{ querystring }}{% endif %}" aria-label="First page">&laquo;</a>
+    <a class="btn secondary" href="?{{ pkey }}={{ page.previous_page_number }}{% if querystring %}&{{ querystring }}{% endif %}" rel="prev">Previous</a>
+    {% endif %}
+    <span class="pager-status">Page {{ page.number }} of {{ page.paginator.num_pages }} &middot; {{ page.paginator.count }} records</span>
+    {% if page.has_next %}
+    <a class="btn secondary" href="?{{ pkey }}={{ page.next_page_number }}{% if querystring %}&{{ querystring }}{% endif %}" rel="next">Next</a>
+    <a class="btn secondary" href="?{{ pkey }}={{ page.paginator.num_pages }}{% if querystring %}&{{ querystring }}{% endif %}" aria-label="Last page">&raquo;</a>
+    {% endif %}
+</nav>
+{% endif %}
+{% endwith %}

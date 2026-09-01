@@ -1,0 +1,26 @@
+{% extends "layouts/merchant.html" %}
+{% block heading %}Orders{% endblock %}
+{% block subhead %}Submit a purchase order after your account is commercially active.{% endblock %}
+{% block content %}
+<p class="action-row"><a class="btn" href="/merchant/orders/new/">Create purchase order</a></p>
+{% if orders %}
+<div class="card table-wrap">
+    <table class="js-datatable display nowrap w-100">
+        <thead><tr><th>Order ID</th><th>Status</th><th class="num">Total</th><th>Created</th></tr></thead>
+        <tbody>
+        {% for order in orders %}
+        <tr>
+            <td><a href="/merchant/orders/{{ order.public_id }}/">{{ order.public_id }}</a></td>
+            <td><span class="badge {% if order.status == 'APPROVED' %}ok{% elif order.status == 'REJECTED' %}danger{% else %}info{% endif %}">{{ order.get_status_display }}</span></td>
+            <td class="num">₹{{ order.total }}</td>
+            <td data-order="{{ order.created_at|date:'c' }}">{{ order.created_at|date:"d M Y H:i" }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% include "partials/pager.html" %}
+{% else %}
+{% include "partials/empty.html" with art="cart" title="No orders yet" body="Create your first purchase order when your account is approved." cta="Create purchase order" cta_href="/merchant/orders/new/" %}
+{% endif %}
+{% endblock %}

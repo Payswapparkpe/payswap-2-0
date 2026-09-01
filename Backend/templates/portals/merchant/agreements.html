@@ -1,0 +1,148 @@
+{% extends "layouts/merchant.html" %}
+{% block heading %}Agreements{% endblock %}
+{% block subhead %}Complete preview of the voucher supply agreement. eSign opens after verification.{% endblock %}
+{% block content %}
+{% include "partials/stepper.html" with steps=lifecycle aria_label="Agreement" %}
+
+{% if verification_blockers %}
+<section class="card">
+    <h2>Verification required before eSign</h2>
+    <p class="muted">Aadhaar eSign opens only after KYC, KYB, and bank verification succeed.</p>
+    <ul class="plain-list blocker-list">
+        {% for item in verification_blockers %}
+        <li><span class="badge warn">Pending</span> {{ item }}</li>
+        {% endfor %}
+    </ul>
+    <p class="action-row"><a class="btn" href="{% url 'merchant:verification' %}">Open verification centre</a></p>
+</section>
+{% endif %}
+
+{% if agreements %}
+<div class="card table-wrap">
+    <table class="js-datatable display nowrap w-100">
+        <thead><tr><th>Agreement</th><th>Status</th><th>Version</th><th>Issued</th></tr></thead>
+        <tbody>
+        {% for item in agreements %}
+        <tr>
+            <td><a href="?id={{ item.public_id }}">{{ item.public_id }}</a></td>
+            <td>{{ item.get_status_display }}</td>
+            <td>{{ item.version }} · {{ item.template_version }}</td>
+            <td>{{ item.created_at|date:"d M Y" }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+{% if preview_snapshot %}
+<section class="card mt-3">
+    <div class="card-head">
+        <div>
+            <h2>Parties</h2>
+            <p class="muted">Filled from onboarding. Sensitive identifiers are shown as collected.</p>
+        </div>
+    </div>
+    <dl class="kv">
+        <div><dt>First party</dt><dd>{{ preview_snapshot.first_party.legal_name }}</dd></div>
+        <div><dt>Second party</dt><dd>{{ preview_snapshot.second_party.legal_name }}</dd></div>
+        <div><dt>Merchant ID</dt><dd>{{ preview_snapshot.second_party.merchant_id }}</dd></div>
+        <div><dt>Registered office</dt><dd>{{ preview_snapshot.second_party.office }}</dd></div>
+        <div><dt>Signatory</dt><dd>{{ preview_snapshot.second_party.signatory_name }} · {{ preview_snapshot.second_party.signatory_designation }}</dd></div>
+        <div><dt>PAN / GSTIN</dt><dd>{{ preview_snapshot.second_party.pan }} · {{ preview_snapshot.second_party.gstin }}</dd></div>
+        <div><dt>Effective date</dt><dd>{{ preview_snapshot.effective_date }}</dd></div>
+    </dl>
+</section>
+{% endif %}
+
+<section class="card form-card mt-3">
+    <div class="card-head">
+        <div>
+            <h2>{% if selected %}Agreement {{ selected.public_id }}{% else %}Draft voucher supply agreement{% endif %}</h2>
+            <p class="muted">
+                {% if is_draft %}
+                    Draft from your application. The official copy is issued after KYC, KYB, and bank verification.
+                {% else %}
+                    Version {{ selected.version }} · Template {{ selected.template_version }}
+                {% endif %}
+            </p>
+        </div>
+        {% if selected %}
+            {% if selected.status == "EXECUTED" or selected.status == "COUNTERSIGNED" or selected.status == "MERCHANT_SIGNED" %}
+            <span class="badge ok">{{ selected.get_status_display }}</span>
+            {% elif selected.status == "SIGNING_FAILED" %}
+            <span class="badge danger">{{ selected.get_status_display }}</span>
+            {% else %}
+            <span class="badge warn">{{ selected.get_status_display }}</span>
+            {% endif %}
+        {% else %}
+            <span class="badge neutral">Draft preview</span>
+        {% endif %}
+    </div>
+
+    {% if agreement_preview %}
+    <article class="agreement-paper">{{ agreement_preview }}</article>
+    {% else %}
+    {% include "partials/empty.html" with art="file" title="Start onboarding to preview the agreement" body="Legal name, address, and signatory from the application fill the draft automatically." cta="Open onboarding" cta_href="/merchant/onboarding/" %}
+    {% endif %}
+
+    {% if selected and selected.document_hash %}
+    <p class="help">Document SHA-256: <code>{{ selected.document_hash|slice:":16" }}…</code></p>
+    {% endif %}
+
+    {% if selected and selected.status == "MERCHANT_REVIEW" or selected and selected.status == "SIGNING_FAILED" %}
+        {% if verification_ready %}
+        <form method="post" class="mt-3">
+            {% csrf_token %}
+            <label class="field field-check">
+                <input type="checkbox" required>
+                I have reviewed this agreement and consent to signing it electronically using Aadhaar eSign.
+            </label>
+            <div class="action-row">
+                <button type="submit" name="action" value="esign">Continue to eSign</button>
+            </div>
+        </form>
+        {% else %}
+        <p class="help">Complete verification of collected PAN, GSTIN, and bank details to start eSign.</p>
+        {% endif %}
+    {% endif %}
+    {% if selected and selected.esign_request_id %}
+    <p class="muted">eSign {{ selected.esign_status }} · reference {{ selected.esign_request_id }}</p>
+    {% endif %}
+    {% if selected %}
+    <div class="action-row mt-3">
+        {% if selected.signed_file %}
+        <form method="post" action="{% url 'merchant:agreement_download' selected.public_id %}">
+            {% csrf_token %}
+            <input type="hidden" name="kind" value="signed">
+            <button type="submit">Download signed agreement</button>
+        </form>
+        {% elif selected.document_file %}
+        <form method="post" action="{% url 'merchant:agreement_download' selected.public_id %}">
+            {% csrf_token %}
+            <input type="hidden" name="kind" value="source">
+            <button type="submit" class="secondary">Download agreement PDF</button>
+        </form>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% if selected and selected.events.all %}
+    <div class="table-wrap mt-3">
+        <table class="js-datatable display nowrap w-100">
+            <thead><tr><th>When</th><th>Event</th><th>Actor</th><th>IP</th></tr></thead>
+            <tbody>
+            {% for event in selected.events.all %}
+                <tr>
+                    <td>{{ event.created_at|date:"d M Y H:i" }}</td>
+                    <td>{{ event.event }}</td>
+                    <td>{{ event.actor.email|default:"System" }}</td>
+                    <td>{{ event.ip_address|default:"—" }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}

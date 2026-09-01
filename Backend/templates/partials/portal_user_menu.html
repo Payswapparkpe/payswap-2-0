@@ -1,0 +1,34 @@
+<div class="user-chip">
+    <button type="button" data-menu-target="user-menu" aria-expanded="false" aria-controls="user-menu">
+        <span class="avatar" aria-hidden="true">{{ request.user.initials }}</span>
+        <span class="user-meta">
+            <span class="user-name">{{ request.user.display_name }}</span>
+            <span class="user-role">{{ request.user.get_user_type_display }}</span>
+        </span>
+    </button>
+    <div id="user-menu" class="menu user-menu" hidden>
+        <div class="menu-head">
+            <span class="avatar avatar-md" aria-hidden="true">{{ request.user.initials }}</span>
+            <div class="menu-head-copy">
+                <strong>{{ request.user.display_name }}</strong>
+                <p>{{ request.user.email }}</p>
+                <span class="badge info">{{ request.user.get_user_type_display }}</span>
+            </div>
+        </div>
+        <a href="{{ profile_url }}"><svg class="menu-ico" aria-hidden="true"><use href="#i-user"/></svg>Profile</a>
+        <a href="{{ security_url }}"><svg class="menu-ico" aria-hidden="true"><use href="#i-cog"/></svg>Account settings</a>
+        <a href="{{ sessions_url }}"><svg class="menu-ico" aria-hidden="true"><use href="#i-key"/></svg>Sessions &amp; devices</a>
+        <a href="{{ notifications_url }}"><svg class="menu-ico" aria-hidden="true"><use href="#i-bell"/></svg>Notifications</a>
+        {% if support_url %}
+        <a href="{{ support_url }}"><svg class="menu-ico" aria-hidden="true"><use href="#i-life"/></svg>Help &amp; support</a>
+        {% endif %}
+        <a href="{{ messages_url }}"><svg class="menu-ico" aria-hidden="true"><use href="#i-chat"/></svg>Messages</a>
+        <div class="menu-sep" role="separator"></div>
+        <form class="menu-action" method="post" action="{{ logout_url }}">
+            {% csrf_token %}
+            <button class="menu-link menu-link-danger" type="submit">
+                <svg class="menu-ico" aria-hidden="true"><use href="#i-logout"/></svg>Sign out
+            </button>
+        </form>
+    </div>
+</div>

@@ -1,0 +1,4 @@
+{{ product }}
+
+A session for {{ user.email }} was revoked.
+{{ action_url }}

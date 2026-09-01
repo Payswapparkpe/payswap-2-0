@@ -1,0 +1,49 @@
+{% extends "layouts/employee.html" %}
+{% block heading %}{{ application.public_id }}{% endblock %}
+{% block breadcrumbs %}
+<nav class="breadcrumbs" aria-label="Breadcrumb">
+    <a href="/employee/queue/">Queue</a>
+    <span aria-hidden="true">/</span>
+    <span aria-current="page">{{ application.public_id }}</span>
+</nav>
+{% endblock %}
+{% block content %}
+<section class="card">
+    <div class="card-head">
+        <h2>{{ merchant.business_name }}</h2>
+        <span class="badge {% if application.status == 'SUBMITTED' or application.status == 'UNDER_REVIEW' %}warn{% elif application.status == 'APPROVED' or application.status == 'COMPLETE' %}ok{% elif application.status == 'REJECTED' %}danger{% else %}info{% endif %}">{{ application.get_status_display }}</span>
+    </div>
+    <p class="muted">{{ merchant.public_id }} · {{ merchant.get_entity_type_display }}</p>
+    {% for step in application.steps.all %}
+    <div class="step">
+        <span>{{ step.title }}</span>
+        <span class="badge {% if step.status == 'COMPLETE' %}ok{% else %}neutral{% endif %}">{{ step.get_status_display }}</span>
+    </div>
+    {% endfor %}
+    <div class="review-actions">
+        <form method="post">{% csrf_token %}<input type="hidden" name="action" value="approve"><button type="submit">Approve</button></form>
+        <form method="post" class="reject-form">{% csrf_token %}<input type="hidden" name="action" value="reject">
+            <label class="field">Reason
+                <select name="reason" aria-label="Rejection reason">
+                    <option>Business information mismatch</option>
+                    <option>Document unclear</option>
+                    <option>Bank verification failed</option>
+                    <option>Other</option>
+                </select>
+            </label>
+            <button class="danger" type="submit">Reject</button>
+        </form>
+    </div>
+    <form method="post" class="mt-4">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="clarification">
+        <label class="field">Section
+            <select name="step_key" aria-label="Clarification section"><option value="bank">Bank</option><option value="kyc">KYC</option></select>
+        </label>
+        <label class="field">Message
+            <textarea name="message" required placeholder="Enter message"></textarea>
+        </label>
+        <button class="secondary" type="submit">Request clarification</button>
+    </form>
+</section>
+{% endblock %}

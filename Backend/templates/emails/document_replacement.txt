@@ -1,0 +1,6 @@
+{{ product }}
+
+Replace a document
+{{ body|default:"Please replace the document our team highlighted." }}
+{% if reference %}Reference: {{ reference }}
+{% endif %}{{ action_url }}

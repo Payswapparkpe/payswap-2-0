@@ -1,0 +1,38 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.pem
+*.key
+
+# Preserved Backend GitLab metadata (not part of this repo)
+.backend-gitlab.git/
+
+# Python / Django
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.coverage
+.pytest_cache/
+htmlcov/
+*.sqlite3
+db.sqlite3-journal
+
+# Node / Angular
+node_modules/
+dist/
+.angular/
+.wrangler/
+.dev.vars
+
+# Editors
+.idea/
+*.swp
+*.swo

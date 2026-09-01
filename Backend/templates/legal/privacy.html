@@ -1,0 +1,27 @@
+{% extends "legal/base.html" %}
+{% block title %}Privacy Policy{% endblock %}
+{% block heading %}Privacy Policy{% endblock %}
+{% block content %}
+<p>{{ legal_entity_name }} processes personal and business data to operate merchant onboarding, KYC/KYB, commercial agreements, and purchase-order review. This policy is intended to meet the Digital Personal Data Protection Act, 2023 and applicable IT Rules for an Indian fintech operations platform.</p>
+<h2>1. Data we collect</h2>
+<ul>
+    <li>Account data: name, work email, mobile number, role, and authentication factors (password hash, authenticator enrolment, passkeys).</li>
+    <li>Business data: legal name, PAN, GSTIN, CIN, bank account details (account numbers stored encrypted), uploaded KYC documents, and agreement records.</li>
+    <li>Order data: purchase orders, pricing snapshots, and staff review decisions.</li>
+    <li>Technical data: IP address, user agent, session identifiers, audit logs, and cookie preferences.</li>
+</ul>
+<h2>2. Why we process it</h2>
+<p>We process data to create and secure accounts, verify identity and bank ownership, execute commercial agreements, review purchase orders, detect fraud, meet audit and regulatory obligations, and communicate with you in-app, by email, and by SMS OTP.</p>
+<h2>3. Processors</h2>
+<p>Depending on configuration, we may use Amazon SES for email, Kaleyra for SMS OTPs, and Cashfree Verification for PAN, GSTIN, bank account, DigiLocker Aadhaar, and eSign. Those providers process data only to perform the requested verification or delivery.</p>
+<h2>4. Retention</h2>
+<p>KYC, agreement, order, and audit records are retained for the period required by financial-services record-keeping and dispute handling, then deleted or anonymised where feasible.</p>
+<h2>5. Your rights</h2>
+<p>You may request access, correction, or deletion of personal data, subject to legal retention duties. Contact the grievance officer listed below. You may withdraw cookie consent for optional cookies at any time by clearing site cookies.</p>
+<h2>6. Security</h2>
+<p>We use HTTPS, hashed passwords, encrypted sensitive fields, role-based access, audit logging, and session controls. No method of transmission is perfectly secure.</p>
+<h2>7. Children</h2>
+<p>This is a business platform. We do not knowingly onboard minors.</p>
+<h2>8. Contact</h2>
+<p>{{ legal_entity_name }}{% if grievance_officer_name %}<br>{{ grievance_officer_name }}{% endif %}{% if grievance_email %}<br><a href="mailto:{{ grievance_email }}">{{ grievance_email }}</a>{% endif %}{% if grievance_postal_address %}<br>{{ grievance_postal_address }}{% endif %}</p>
+{% endblock %}

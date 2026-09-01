@@ -1,0 +1,6 @@
+{{ product }}
+
+Order approved
+{{ body|default:"Your purchase order was approved. Sign in to the portal to view details." }}
+{% if reference %}Reference: {{ reference }}
+{% endif %}{{ action_url }}

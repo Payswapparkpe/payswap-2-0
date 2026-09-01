@@ -1,0 +1,6 @@
+{{ product }}
+
+Document rejected
+{{ body|default:"A submitted document was rejected. Upload a replacement from Documents." }}
+{% if reference %}Reference: {{ reference }}
+{% endif %}{{ action_url }}

@@ -1,0 +1,10 @@
+{{ product }}
+
+{{ heading|default:title }}
+{{ body|default:default_body }}
+{% if reference %}Reference: {{ reference }}
+{% endif %}{% if product_name %}Item: {{ product_name }}
+{% endif %}{% if quantity %}Quantity: {{ quantity }}
+{% endif %}{% if total %}Total: ₹{{ total }}
+{% endif %}{% if reason %}Reason: {{ reason }}
+{% endif %}{{ action_url }}

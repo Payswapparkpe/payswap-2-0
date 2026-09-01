@@ -1,0 +1,21 @@
+{% extends "layouts/employee.html" %}
+{% block heading %}Orders{% endblock %}
+{% block content %}
+{% if orders %}
+<div class="card table-wrap"><table>
+<thead><tr><th>Order ID</th><th>Merchant</th><th>Status</th><th class="num">Total</th></tr></thead>
+<tbody>
+{% for order in orders %}
+<tr>
+    <td><a href="/employee/orders/{{ order.public_id }}/">{{ order.public_id }}</a></td>
+    <td>{{ order.merchant.public_id }}</td>
+    <td><span class="badge {% if order.status == 'APPROVED' %}ok{% elif order.status == 'REJECTED' %}danger{% else %}info{% endif %}">{{ order.get_status_display }}</span></td>
+    <td class="num">₹{{ order.total }}</td>
+</tr>
+{% endfor %}
+</tbody></table></div>
+{% include "partials/pager.html" %}
+{% else %}
+{% include "partials/empty.html" with art="cart" title="No orders in your queue" body="Department orders appear here when they need maker-checker review." %}
+{% endif %}
+{% endblock %}

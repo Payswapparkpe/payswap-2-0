@@ -1,0 +1,9 @@
+<label class="field{% if span %} field-span{% endif %}{% if field.errors %} is-invalid{% endif %}">
+    <span class="field-title">{{ field.label }}{% if field.field.required %} <span class="required-mark">*</span>{% endif %}</span>
+    <span class="field-control">
+        {% if icon %}<svg class="field-control-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#{{ icon }}"/></svg>{% endif %}
+        {{ field }}
+    </span>
+    {% if hint %}<span class="field-hint">{{ hint }}</span>{% endif %}
+    <span class="field-alert" data-field-alert>{{ field.errors.0 }}</span>
+</label>

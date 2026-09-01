@@ -1,0 +1,147 @@
+{% extends "layouts/administration.html" %}
+{% block heading %}{{ merchant.business_name }}{% endblock %}
+{% block subhead %}{{ merchant.public_id }} · {{ merchant.get_entity_type_display }} · {{ merchant.get_status_display }}{% endblock %}
+{% block breadcrumbs %}
+<nav class="breadcrumbs" aria-label="Breadcrumb">
+    <a href="/administration/merchants/">Merchants</a>
+    <span aria-hidden="true">/</span>
+    <span aria-current="page">{{ merchant.public_id }}</span>
+</nav>
+{% endblock %}
+{% block content %}
+<div class="grid grid-side">
+    <aside class="card status-panel">
+        <div>KYC <strong>{{ merchant.get_kyc_status_display }}</strong></div>
+        <div>KYB <strong>{{ merchant.get_kyb_status_display }}</strong></div>
+        <div>Bank <strong>{{ merchant.get_bank_status_display }}</strong></div>
+        <div>Agreement <strong>{{ merchant.get_agreement_status_display }}</strong></div>
+        <div>Risk <strong>{{ merchant.get_risk_status_display }}</strong></div>
+        <div>Commercial <strong>{{ merchant.get_commercial_status_display }}</strong></div>
+    </aside>
+    <section class="card">
+        <div class="tabs" role="tablist" aria-label="Merchant sections">
+            <a class="tab" href="?tab=overview" {% if tab != "documents" and tab != "orders" and tab != "agreements" and tab != "audit" %}aria-current="page"{% endif %}>Overview</a>
+            <a class="tab" href="?tab=documents" {% if tab == "documents" %}aria-current="page"{% endif %}>Documents</a>
+            <a class="tab" href="?tab=orders" {% if tab == "orders" %}aria-current="page"{% endif %}>Orders</a>
+            <a class="tab" href="?tab=agreements" {% if tab == "agreements" %}aria-current="page"{% endif %}>Agreement</a>
+            <a class="tab" href="?tab=audit" {% if tab == "audit" %}aria-current="page"{% endif %}>Audit</a>
+        </div>
+        {% if tab == "documents" %}
+            {% for document in documents %}
+            <div class="step">
+                <div>{{ document.get_doc_type_display }} · {{ document.public_id }} · {{ document.get_status_display }}</div>
+                {% if document.status != "VERIFIED" and document.status != "REJECTED" %}
+                <div class="action-row">
+                    <form method="post" action="/administration/documents/{{ document.public_id }}/">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="approve">
+                        <button type="submit">Approve</button>
+                    </form>
+                    <form method="post" action="/administration/documents/{{ document.public_id }}/" class="reject-form">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="reject">
+                        <label class="field grow">Rejection reason
+                            <input name="reason" required placeholder="Enter reason">
+                        </label>
+                        <button class="danger" type="submit">Reject</button>
+                    </form>
+                </div>
+                {% endif %}
+            </div>
+            {% empty %}
+            <p class="muted">No documents uploaded.</p>
+            {% endfor %}
+        {% elif tab == "orders" %}
+            {% for order in orders %}
+            <p>{{ order.public_id }} · {{ order.get_status_display }} · ₹{{ order.total }}</p>
+            {% empty %}<p class="muted">No orders yet.</p>{% endfor %}
+        {% elif tab == "agreements" %}
+            <p class="muted">Issued only after KYC, KYB, and bank verification. Merchant signs with Aadhaar eSign; then countersign.</p>
+            {% for agreement in agreements %}
+            <p>{{ agreement.public_id }} · v{{ agreement.version }} · {{ agreement.get_status_display }}</p>
+            <pre class="agreement-body">{{ agreement.body }}</pre>
+            {% empty %}<p class="muted">No agreement generated.</p>{% endfor %}
+            <div class="action-row">
+            <form method="post">{% csrf_token %}<input type="hidden" name="action" value="generate_agreement"><button type="submit">Generate prefilled agreement</button></form>
+            <form method="post">{% csrf_token %}<input type="hidden" name="action" value="countersign"><button class="secondary" type="submit">Countersign</button></form>
+            </div>
+        {% elif tab == "audit" %}
+            {% for event in audit_events %}
+            <p>{{ event.created_at }} · {{ event.action }} · {{ event.result }}</p>
+            {% empty %}<p class="muted">No audit events for this merchant.</p>{% endfor %}
+        {% else %}
+            <p>Owner: {{ merchant.owner.email }}</p>
+            <div class="action-row mt-3">
+                <form method="post" class="toolbar">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="assign">
+                    <label class="field grow">Assigned reviewer
+                        <select name="assigned_to">
+                            <option value="">Unassigned</option>
+                            {% for employee in employees %}
+                            <option value="{{ employee.pk }}" {% if merchant.assigned_to_id == employee.pk %}selected{% endif %}>{{ employee.email }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                    <button class="secondary" type="submit">Assign</button>
+                </form>
+                {% if merchant.status == "SUSPENDED" %}
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="reactivate">
+                    <button type="submit">Reactivate merchant</button>
+                </form>
+                {% else %}
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="suspend">
+                    <button class="danger" type="submit">Suspend merchant</button>
+                </form>
+                {% endif %}
+            </div>
+            {% if application %}
+            <p>Application {{ application.public_id }} is {{ application.get_status_display }}.</p>
+            <div class="review-actions mt-3">
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="approve">
+                <button type="submit">Approve application</button>
+            </form>
+            <form method="post" class="reject-form">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="reject">
+                <label class="field">Reason
+                    <select name="reason">
+                        <option>Business information mismatch</option>
+                        <option>Document unclear</option>
+                        <option>Bank verification failed</option>
+                        <option>Incomplete ownership information</option>
+                        <option>Agreement issue</option>
+                        <option>Risk review required</option>
+                        <option>Other</option>
+                    </select>
+                </label>
+                <button class="danger" type="submit">Reject</button>
+            </form>
+            </div>
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="clarification">
+                <label class="field">Section
+                    <select name="step_key">
+                        <option value="bank">Bank</option>
+                        <option value="kyc">KYC</option>
+                        <option value="kyb">KYB</option>
+                        <option value="documents">Documents</option>
+                    </select>
+                </label>
+                <label class="field">Message
+                    <textarea name="message" required></textarea>
+                </label>
+                <button class="secondary" type="submit">Request clarification</button>
+            </form>
+            {% endif %}
+        {% endif %}
+    </section>
+</div>
+{% endblock %}

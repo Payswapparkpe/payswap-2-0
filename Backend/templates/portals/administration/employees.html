@@ -1,0 +1,44 @@
+{% extends "layouts/administration.html" %}
+{% block heading %}Employees{% endblock %}
+{% block content %}
+{% if employees %}
+<div class="card table-wrap"><table>
+<thead><tr><th>Email</th><th>Department</th><th>Roles</th><th>Active</th><th>Actions</th></tr></thead>
+<tbody>
+{% for employee in employees %}
+<tr>
+    <td>{{ employee.email }}</td>
+    <td>{{ employee.department }}</td>
+    <td>
+        {% for membership in employee.user_roles.all %}
+        <span class="badge neutral">{{ membership.role.name }}</span>
+        {% empty %}<span class="muted">None</span>{% endfor %}
+    </td>
+    <td><span class="badge {% if employee.is_active %}ok{% else %}danger{% endif %}">{{ employee.is_active|yesno:"Active,Suspended" }}</span></td>
+    <td>
+        <form method="post" action="/administration/security/users/{{ employee.pk }}/" class="action-row">
+            {% csrf_token %}
+            <button type="submit" name="action" value="force_logout" class="secondary">Force logout</button>
+            <button type="submit" name="action" value="reset_mfa" class="secondary">Reset MFA</button>
+            {% if employee.is_active %}
+            <button type="submit" name="action" value="suspend" class="danger">Suspend</button>
+            {% endif %}
+        </form>
+        <form method="post" action="/administration/employees/{{ employee.pk }}/role/" class="action-row mt-2">
+            {% csrf_token %}
+            <label class="sr-only" for="role-{{ employee.pk }}">Role</label>
+            <select id="role-{{ employee.pk }}" name="role">
+                {% for role in roles %}
+                <option value="{{ role.slug }}">{{ role.name }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit" name="action" value="grant" class="secondary">Grant</button>
+            <button type="submit" name="action" value="revoke" class="secondary">Revoke</button>
+        </form>
+    </td>
+</tr>
+{% endfor %}
+</tbody></table></div>
+{% include "partials/pager.html" %}
+{% else %}{% include "partials/empty.html" with art="people" title="No employees yet" body="Staff accounts appear here after they are invited and seeded." %}{% endif %}
+{% endblock %}

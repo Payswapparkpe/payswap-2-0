@@ -1,0 +1,6 @@
+{{ product }}
+
+Action required
+{{ body|default:"Please update the highlighted section of your merchant application." }}
+{% if reference %}Reference: {{ reference }}
+{% endif %}{{ action_url }}

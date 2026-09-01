@@ -1,0 +1,8 @@
+{% extends "emails/layout.html" %}
+{% block content %}
+<h1 style="margin:0 0 12px;font-size:22px;">Agreement eSign did not complete</h1>
+<p style="margin:0 0 16px;line-height:1.5;">{{ body|default:"eSign for your agreement did not complete. Sign in to retry." }}</p>
+{% if reference %}<p style="margin:0 0 8px;color:#5b6578;">Agreement: {{ reference }}</p>{% endif %}
+{% if reason %}<p style="margin:0 0 16px;color:#5b6578;">Reason: {{ reason }}</p>{% endif %}
+{% include "emails/_cta.html" %}
+{% endblock %}

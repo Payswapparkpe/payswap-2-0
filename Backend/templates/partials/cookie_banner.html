@@ -1,0 +1,13 @@
+{% if request and not request.COOKIES.ps_cookie_consent %}
+<div class="cookie-banner" role="dialog" aria-label="Cookie consent">
+    <div>
+        <strong>Cookies</strong>
+        <p>We use necessary cookies to keep you signed in and protect the service. Optional cookies are used only if you allow them. Read the <a href="/legal/cookies/">Cookie Policy</a>.</p>
+    </div>
+    <form method="post" action="/legal/cookies/consent/">
+        {% csrf_token %}
+        <button class="secondary" type="submit" name="consent" value="necessary">Necessary only</button>
+        <button type="submit" name="consent" value="all">Accept all</button>
+    </form>
+</div>
+{% endif %}

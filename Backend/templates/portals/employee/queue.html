@@ -1,0 +1,34 @@
+{% extends "layouts/employee.html" %}
+{% block heading %}Assigned cases{% endblock %}
+{% block content %}
+{% if applications %}
+<div class="card">
+    <h2>Applications</h2>
+    <div class="result-list">
+    {% for application in applications %}
+    <a class="card result" href="/employee/queue/{{ application.public_id }}/">
+        {{ application.public_id }} · {{ application.merchant.business_name }}
+        <span class="badge">{{ application.get_status_display }}</span>
+    </a>
+    {% endfor %}
+    </div>
+</div>
+{% endif %}
+{% if orders %}
+<div class="card mt-4">
+    <h2>Orders</h2>
+    <div class="result-list">
+    {% for order in orders %}
+    <a class="card result" href="/employee/orders/{{ order.public_id }}/">
+        {{ order.public_id }} · ₹{{ order.total }}
+        <span class="badge">{{ order.get_status_display }}</span>
+    </a>
+    {% endfor %}
+    </div>
+</div>
+{% endif %}
+{% if not applications and not orders %}
+{% include "partials/empty.html" with art="queue" title="No pending work in your department queue" body="Cases appear here when they are assigned to your department." %}
+{% endif %}
+{% include "partials/pager.html" %}
+{% endblock %}

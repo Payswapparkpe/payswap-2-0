@@ -1,0 +1,10 @@
+{% load static %}
+<meta name="description" content="payswap — Power of Banking: payment, financial services, and branded voucher solutions.">
+<meta name="theme-color" content="#0a1633">
+{% if not request.user.is_authenticated %}
+<meta property="og:type" content="website">
+<meta property="og:title" content="payswap — Power of Banking">
+<meta property="og:description" content="Payment, financial services, and branded voucher solutions.">
+{% endif %}
+<link rel="icon" type="image/png" href="{% static 'images/logo/favicon-icon.png' %}">
+<link rel="apple-touch-icon" href="{% static 'images/logo/logo-icon.png' %}">

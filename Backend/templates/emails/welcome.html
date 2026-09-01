@@ -1,0 +1,8 @@
+{% extends "emails/layout.html" %}
+{% block content %}
+<h1 style="margin:0 0 12px;font-size:22px;">Welcome to {{ product }}</h1>
+<p style="margin:0 0 16px;line-height:1.5;">Your merchant account is ready. Sign in with this email and the password you created, then complete onboarding, KYC, KYB, bank verification, and eSign.</p>
+<p style="margin:0 0 16px;line-height:1.5;"><strong>Sign-in email:</strong> {{ email|default:user.email }}</p>
+<p style="margin:0 0 16px;line-height:1.5;color:#5b6578;font-size:13px;">We never send your password by email. If you did not create this account, ignore this message.</p>
+{% include "emails/_cta.html" %}
+{% endblock %}

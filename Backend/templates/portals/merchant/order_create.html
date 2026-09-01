@@ -1,0 +1,129 @@
+{% extends "layouts/merchant.html" %}
+{% block heading %}Create purchase order{% endblock %}
+{% block subhead %}Step {{ step }} of 5. Totals on this page are calculated on the server.{% endblock %}
+{% block content %}
+<nav aria-label="Order steps">
+    <ol class="stepper">
+        <li class="stepper-item {% if step > 1 %}done{% endif %}{% if step == 1 %} current{% endif %}"><span class="stepper-dot" aria-hidden="true">{% if step > 1 %}&#10003;{% else %}1{% endif %}</span><span>Service</span></li>
+        <li class="stepper-item {% if step > 2 %}done{% endif %}{% if step == 2 %} current{% endif %}"><span class="stepper-dot" aria-hidden="true">{% if step > 2 %}&#10003;{% else %}2{% endif %}</span><span>Brand</span></li>
+        <li class="stepper-item {% if step > 3 %}done{% endif %}{% if step == 3 %} current{% endif %}"><span class="stepper-dot" aria-hidden="true">{% if step > 3 %}&#10003;{% else %}3{% endif %}</span><span>Quantity</span></li>
+        <li class="stepper-item {% if step > 4 %}done{% endif %}{% if step == 4 %} current{% endif %}"><span class="stepper-dot" aria-hidden="true">{% if step > 4 %}&#10003;{% else %}4{% endif %}</span><span>Pricing</span></li>
+        <li class="stepper-item {% if step == 5 %} current{% endif %}"><span class="stepper-dot" aria-hidden="true">5</span><span>Confirm</span></li>
+    </ol>
+</nav>
+{% if step == 1 %}
+<section class="card form-card">
+    <div class="card-head">
+        <div>
+            <h2>Select service</h2>
+            <p class="muted">Choose the catalog service for this purchase order.</p>
+        </div>
+    </div>
+    <div class="choice-list">
+    {% for service in services %}
+        <a class="choice-tile" href="?step=2&service={{ service.code }}">
+            <span class="choice-tile-copy">
+                <strong>{{ service.name }}</strong>
+                <span class="muted">Continue to brand selection</span>
+            </span>
+            <svg class="nav-ico" aria-hidden="true"><use href="#i-arrow-right"/></svg>
+        </a>
+    {% empty %}
+        <p class="muted">No services are available to order yet.</p>
+    {% endfor %}
+    </div>
+</section>
+{% elif step == 2 %}
+<section class="card form-card">
+    <div class="card-head">
+        <div>
+            <h2>{% if selected_brand %}Select denomination{% else %}Select brand{% endif %}</h2>
+            <p class="muted">{% if selected_brand %}{{ selected_brand.name }}{% else %}Pick a brand, then a denomination.{% endif %}</p>
+        </div>
+    </div>
+    <div class="choice-list">
+    {% if not selected_brand %}
+    {% for brand in brands %}
+        <a class="choice-tile" href="?step=2&brand={{ brand.slug }}">
+            <span class="choice-tile-copy">
+                <strong>{{ brand.name }}</strong>
+                <span class="muted">View denominations</span>
+            </span>
+            <svg class="nav-ico" aria-hidden="true"><use href="#i-arrow-right"/></svg>
+        </a>
+    {% empty %}
+        <p class="muted">No brands are configured.</p>
+    {% endfor %}
+    {% else %}
+    {% for item in products %}
+        <a class="choice-tile" href="?step=3&product={{ item.pk }}&brand={{ selected_brand.slug }}">
+            <span class="choice-tile-copy">
+                <strong>{{ item.name }}</strong>
+                <span class="muted">Continue to quantity</span>
+            </span>
+            <svg class="nav-ico" aria-hidden="true"><use href="#i-arrow-right"/></svg>
+        </a>
+    {% empty %}
+        <p class="muted">No products are configured for this brand.</p>
+    {% endfor %}
+    <p class="mt-2"><a href="?step=2">All brands</a></p>
+    {% endif %}
+    </div>
+</section>
+{% elif step == 3 %}
+<section class="card form-card">
+    <div class="card-head">
+        <div>
+            <h2>Quantity and denomination</h2>
+            <p class="muted">Denomination ₹{{ product.denomination }}</p>
+        </div>
+    </div>
+    <form method="get">
+        <input type="hidden" name="step" value="4">
+        <input type="hidden" name="product" value="{{ product.pk }}">
+        <label class="field">
+            <span class="field-title">Quantity <span class="required-mark">*</span></span>
+            <span class="field-control">
+                <svg class="field-control-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-cart"/></svg>
+                <input type="number" name="quantity" min="1" value="{{ quantity }}" placeholder="Enter quantity">
+            </span>
+        </label>
+        <button type="submit">Review pricing</button>
+    </form>
+</section>
+{% elif step == 4 and quote %}
+<section class="card form-card">
+    <div class="card-head">
+        <div>
+            <h2>Review pricing</h2>
+            <p class="muted">Confirm the calculated totals before you continue.</p>
+        </div>
+    </div>
+    <dl class="kv stack">
+        <div><dt>Quantity</dt><dd>{{ quote.quantity }}</dd></div>
+        <div><dt>Unit value</dt><dd>₹{{ quote.unit_value }}</dd></div>
+        <div><dt>Subtotal</dt><dd>₹{{ quote.subtotal }}</dd></div>
+        <div><dt>Fees</dt><dd>₹{{ quote.fees }}</dd></div>
+        <div><dt>Tax</dt><dd>₹{{ quote.tax }}</dd></div>
+        <div><dt>Total</dt><dd><strong>₹{{ quote.total }}</strong></dd></div>
+    </dl>
+    <p class="action-row"><a class="btn" href="?step=5&product={{ product.pk }}&quantity={{ quote.quantity }}">Continue <svg class="nav-ico" aria-hidden="true"><use href="#i-arrow-right"/></svg></a></p>
+</section>
+{% else %}
+<section class="card form-card">
+    <div class="card-head">
+        <div>
+            <h2>Confirm order</h2>
+            {% if quote %}<p class="muted">Server total ₹{{ quote.total }}</p>{% endif %}
+        </div>
+    </div>
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="product" value="{{ product.pk }}">
+        <input type="hidden" name="quantity" value="{{ quantity }}">
+        <input type="hidden" name="idempotency_key" value="{{ idempotency_key }}">
+        <button type="submit">Confirm order</button>
+    </form>
+</section>
+{% endif %}
+{% endblock %}

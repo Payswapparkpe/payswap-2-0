@@ -1,0 +1,83 @@
+{% extends "layouts/employee.html" %}
+{% block heading %}{{ order.public_id }}{% endblock %}
+{% block breadcrumbs %}
+<nav class="breadcrumbs" aria-label="Breadcrumb">
+    <a href="/employee/orders/">Orders</a>
+    <span aria-hidden="true">/</span>
+    <span aria-current="page">{{ order.public_id }}</span>
+</nav>
+{% endblock %}
+{% block content %}
+<section class="card">
+    <div class="card-head">
+        <h2>Order {{ order.public_id }}</h2>
+        <span class="badge {% if order.status == 'APPROVED' %}ok{% elif order.status == 'REJECTED' or order.status == 'CANCELLED' %}danger{% elif order.status == 'CHANGES_REQUESTED' %}warn{% else %}info{% endif %}">{{ order.get_status_display }}</span>
+    </div>
+    <p class="muted">Merchant {{ order.merchant.public_id }} · Revision {{ order.revision }}</p>
+    <p>Quantity {{ order.quantity }} · Total ₹{{ order.total }}</p>
+    <form method="post" action="{% url 'employee:order_document' order.public_id %}" class="mt-2">
+        {% csrf_token %}
+        <button type="submit" class="secondary">Download purchase order (A4 PDF)</button>
+    </form>
+
+    <div class="action-row">
+        {% if can_review %}
+        <form method="post">{% csrf_token %}<input type="hidden" name="action" value="review"><button class="secondary" type="submit">Start review</button></form>
+        {% endif %}
+        {% if can_approve %}
+        <form method="post">{% csrf_token %}<input type="hidden" name="action" value="approve"><button type="submit">Approve order</button></form>
+        {% endif %}
+    </div>
+
+    {% if can_reject or can_request_changes %}
+    <details class="mt-4">
+        <summary>Reject or request changes</summary>
+        <form method="post" class="mt-2">
+            {% csrf_token %}
+            <label class="field">Reason
+                <textarea name="reason" rows="2" required placeholder="Enter the reason shown to the merchant"></textarea>
+            </label>
+            <div class="action-row">
+                {% if can_request_changes %}
+                <button type="submit" name="action" value="request_changes" class="secondary">Request changes</button>
+                {% endif %}
+                {% if can_reject %}
+                <button type="submit" name="action" value="reject" class="danger">Reject order</button>
+                {% endif %}
+            </div>
+        </form>
+    </details>
+    {% endif %}
+
+    {% if can_amend %}
+    <details class="mt-4">
+        <summary>Amend order</summary>
+        <form method="post" class="mt-2">
+            {% csrf_token %}
+            <label class="field">Quantity
+                <input type="number" name="quantity" min="1" value="{{ order.quantity }}" placeholder="Enter quantity">
+            </label>
+            <p class="muted">Amending creates a new revision and returns the order to review.</p>
+            <button type="submit" name="action" value="amend" class="secondary">Amend and resubmit for review</button>
+        </form>
+    </details>
+    {% endif %}
+</section>
+
+<section class="card">
+    <h2>History</h2>
+    {% if order.events.all %}
+    <ol class="timeline">
+        {% for event in order.events.all %}
+        <li>
+            <strong>{{ event.to_status|default:event.from_status }}</strong>
+            <span class="muted"> — {{ event.created_at|date:"d M Y H:i" }}{% if event.actor %} by {{ event.actor }}{% endif %}{% if event.revision %} · rev {{ event.revision }}{% endif %}</span>
+            {% if event.reason %}<p class="muted">{{ event.reason }}</p>{% endif %}
+        </li>
+        {% endfor %}
+    </ol>
+    {% else %}
+    <p class="muted">No events yet.</p>
+    {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,42 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ error_title|default:"Error" }}</title>
+    {% include "partials/brand_meta.html" %}
+    <link rel="stylesheet" href="{% static 'css/app.css' %}">
+</head>
+<body class="error-body auth-page">
+    {% include "partials/icons.html" %}
+    {% include "partials/page_loader.html" %}
+    {% include "partials/flash.html" %}
+    <main class="error-page auth-shell" id="content">
+        <aside class="auth-story">
+            <div class="auth-story-copy">
+                <p class="error-code">{{ error_code|default:"Error" }}</p>
+                <h1>{{ error_title|default:"Something went wrong" }}</h1>
+                <p>{{ error_message|default:"This page is not available." }}</p>
+            </div>
+        </aside>
+        <div class="auth-panel">
+            <section class="card auth-card">
+                <header class="auth-card-head">
+                    <div>
+                        <h2>{{ error_title|default:"Something went wrong" }}</h2>
+                        <p class="muted">{{ error_message|default:"This page is not available." }}</p>
+                    </div>
+                    {% include "partials/auth_brand.html" %}
+                </header>
+                {% block extra %}{% endblock %}
+                <p class="action-row">
+                    <a class="btn" href="{{ home_url|default:'/' }}">Return home</a>
+                </p>
+                <p class="muted">If you believe this is a mistake, open a support ticket after you sign in.</p>
+            </section>
+            {% include "partials/legal_footer.html" %}
+        </div>
+    </main>
+</body>
+</html>

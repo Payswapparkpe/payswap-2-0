@@ -1,0 +1,6 @@
+{{ product }}
+
+Application approved
+{{ body|default:"Your merchant application has been approved. Agreement generation is next." }}
+{% if reference %}Reference: {{ reference }}
+{% endif %}{{ action_url }}

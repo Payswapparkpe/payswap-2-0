@@ -1,0 +1,221 @@
+{% extends "layouts/merchant.html" %}
+{% block heading %}Profile{% endblock %}
+{% block subhead %}Account settings and a mirror of business identifiers. Prefer completing PAN and DOB in the onboarding wizard; this page keeps documents matched to the same details.{% endblock %}
+{% block content %}
+<section class="paper-sheet profile-hero">
+    <div class="avatar-lg" aria-hidden="true">{{ request.user.initials }}</div>
+    <div class="profile-meta">
+        <h2>{{ request.user.name|default:request.user.email }}</h2>
+        <p class="muted">{{ request.user.get_user_type_display }}{% if merchant %} · {{ merchant.get_entity_type_display }}{% endif %}</p>
+        <p>{{ request.user.email }}</p>
+        <p>{{ request.user.mobile|default:"Mobile not provided" }}</p>
+        {% if profile_gaps %}
+        <p class="alert alert-warn">Add {{ profile_gaps|join:", " }} so uploaded documents can be matched at {{ match_threshold }}%.</p>
+        {% endif %}
+        <p class="action-row">
+            <a class="btn" href="{{ sessions_url }}"><svg class="btn-ico" aria-hidden="true"><use href="#i-key"/></svg> Manage sessions</a>
+            <a class="btn secondary" href="{{ security_url }}"><svg class="btn-ico" aria-hidden="true"><use href="#i-shield"/></svg> Security centre</a>
+            <a class="btn ghost" href="/merchant/verify/email/"><svg class="btn-ico" aria-hidden="true"><use href="#i-mail"/></svg> Verify email</a>
+        </p>
+    </div>
+</section>
+
+<div class="profile-grid">
+<section class="paper-sheet">
+    <div class="card-head">
+        <div>
+            <h3>Sign-in details</h3>
+            <p class="muted">Name and mobile used across this workspace.</p>
+        </div>
+        <svg class="sheet-ico" aria-hidden="true"><use href="#i-user"/></svg>
+    </div>
+    <form method="post" novalidate data-validate-form>
+        {% csrf_token %}
+        <input type="hidden" name="action" value="profile">
+        <label class="field">
+            <span class="field-title">Full name <span class="required-mark">*</span></span>
+            <span class="field-control">
+                <svg class="field-control-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-user"/></svg>
+                <input type="text" name="name" value="{{ request.user.name }}" maxlength="150" autocomplete="name" data-validate="required" placeholder="Enter your full name">
+            </span>
+        </label>
+        <label class="field">
+            <span class="field-title">Mobile</span>
+            <span class="field-control">
+                <svg class="field-control-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-phone"/></svg>
+                <input type="text" name="mobile" value="{{ request.user.mobile }}" inputmode="numeric" maxlength="10" data-validate="mobile" placeholder="Enter mobile number">
+            </span>
+        </label>
+        <button type="submit">Save sign-in details</button>
+    </form>
+</section>
+
+<section class="paper-sheet">
+    <div class="card-head">
+        <div>
+            <h3>Business profile</h3>
+            <p class="muted">Optional mirror of wizard data. PAN and date of birth are also collected on the Business and People steps.</p>
+        </div>
+        <svg class="sheet-ico" aria-hidden="true"><use href="#i-store"/></svg>
+    </div>
+    {% if editable %}
+    <form method="post" novalidate data-validate-form data-entity-form>
+        {% csrf_token %}
+        <input type="hidden" name="action" value="business">
+        <label class="field">
+            <span class="field-title">Type of business <span class="required-mark">*</span></span>
+            <span class="field-control">
+                <svg class="field-control-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-store"/></svg>
+                <select name="entity_type" data-entity-select data-validate="required">
+                    {% for value, label in entity_types %}
+                    <option value="{{ value }}" {% if merchant and merchant.entity_type == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </span>
+        </label>
+        <label class="field">
+            <span class="field-title">Legal name</span>
+            <span class="field-control">
+                <svg class="field-control-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-user"/></svg>
+                <input name="legal_name" value="{{ profile.legal_name }}" maxlength="200" placeholder="Enter legal name">
+            </span>
+        </label>
+        <label class="field">
+            <span class="field-title">PAN</span>
+            <span class="field-control">
+                <svg class="field-control-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-file"/></svg>
+                <input name="pan" value="{{ profile.pan }}" maxlength="10" class="uppercase" autocomplete="off" placeholder="Enter PAN">
+            </span>
+        </label>
+        <label class="field">
+            <span class="field-title">Date of birth</span>
+            <span class="field-control">
+                <svg class="field-control-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-clock"/></svg>
+                <input name="owner_dob" value="{{ profile.owner_dob }}" placeholder="Enter date of birth" data-datepicker autocomplete="off">
+            </span>
+        </label>
+        <label class="field">
+            <span class="field-title">Owner / signatory name</span>
+            <span class="field-control">
+                <svg class="field-control-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-user"/></svg>
+                <input name="owner_name" value="{{ profile.owner_name }}" maxlength="150" autocomplete="name">
+            </span>
+        </label>
+        <label class="field" data-entities="PRIVATE_LIMITED PUBLIC_LIMITED">
+            <span class="field-title">GSTIN</span>
+            <span class="field-control">
+                <svg class="field-control-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-file"/></svg>
+                <input name="gstin" value="{{ profile.gstin }}" maxlength="15" class="uppercase" autocomplete="off" placeholder="Enter GSTIN">
+            </span>
+        </label>
+        <label class="field" data-entities="PRIVATE_LIMITED PUBLIC_LIMITED">
+            <span class="field-title">CIN</span>
+            <span class="field-control">
+                <svg class="field-control-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-file"/></svg>
+                <input name="cin" value="{{ profile.cin }}" maxlength="21" class="uppercase" autocomplete="off">
+            </span>
+        </label>
+        <label class="field" data-entities="LLP">
+            <span class="field-title">LLPIN</span>
+            <span class="field-control">
+                <svg class="field-control-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-file"/></svg>
+                <input name="llpin" value="{{ profile.llpin }}" maxlength="8" class="uppercase" autocomplete="off" placeholder="Enter LLPIN">
+            </span>
+        </label>
+        <label class="field">
+            <span class="field-title">Registered office</span>
+            <span class="field-control">
+                <svg class="field-control-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-pin"/></svg>
+                <input name="registered_office" value="{{ profile.registered_office }}" maxlength="250">
+            </span>
+        </label>
+        <label class="field">
+            <span class="field-title">PIN code</span>
+            <span class="field-control">
+                <svg class="field-control-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-pin"/></svg>
+                <input name="pincode" value="{{ profile.pincode }}" inputmode="numeric" maxlength="6" data-pincode data-validate="pincode" placeholder="Enter PIN code">
+            </span>
+        </label>
+        <button type="submit">Save business profile</button>
+    </form>
+    {% elif merchant %}
+    <dl class="kv stack">
+        <div><dt>Type of business</dt><dd>{{ merchant.get_entity_type_display }}</dd></div>
+        <div><dt>Legal name</dt><dd>{{ profile.legal_name|default:"—" }}</dd></div>
+        <div><dt>PAN</dt><dd>{{ profile.pan|default:"—" }}</dd></div>
+        <div><dt>Date of birth</dt><dd>{{ profile.owner_dob|default:"—" }}</dd></div>
+        <div><dt>GSTIN</dt><dd>{{ profile.gstin|default:"—" }}</dd></div>
+        <div><dt>CIN</dt><dd>{{ profile.cin|default:"—" }}</dd></div>
+        <div><dt>LLPIN</dt><dd>{{ profile.llpin|default:"—" }}</dd></div>
+    </dl>
+    <p class="help">Identity is locked while the application is under review.</p>
+    {% else %}
+    <p class="muted">Start the onboarding wizard to create a merchant file and enter PAN, people, bank, and documents in one place.</p>
+    <p><a class="btn" href="/merchant/onboarding/">Start onboarding</a></p>
+    {% endif %}
+</section>
+</div>
+
+<div class="profile-grid mt-5">
+<section class="paper-sheet">
+    <div class="card-head">
+        <div>
+            <h3>Notification preferences</h3>
+            <p class="muted">Security alerts are always delivered.</p>
+        </div>
+        <svg class="sheet-ico" aria-hidden="true"><use href="#i-bell"/></svg>
+    </div>
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="preferences">
+        <label class="field field-check">
+            <input type="checkbox" name="email_enabled" {% if prefs.email_enabled %}checked{% endif %}>
+            Email updates about orders, documents, and tickets
+        </label>
+        <label class="field field-check">
+            <input type="checkbox" name="sms_enabled" {% if prefs.sms_enabled %}checked{% endif %}>
+            SMS marketing messages (transactional order and security SMS are always sent)
+        </label>
+        <button type="submit">Save preferences</button>
+    </form>
+</section>
+
+<section class="paper-sheet">
+    <div class="card-head">
+        <div>
+            <h3>Document match</h3>
+            <p class="muted">Uploaded files must match this profile at {{ match_threshold }}% or more.</p>
+        </div>
+        <svg class="sheet-ico" aria-hidden="true"><use href="#i-clip"/></svg>
+    </div>
+    {% if document_rows %}
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>Type</th><th>Match</th><th>Status</th></tr></thead>
+            <tbody>
+            {% for row in document_rows %}
+            <tr>
+                <td>{{ row.document.get_doc_type_display }}</td>
+                <td>
+                    {% if row.match %}
+                    <span class="match-meter" title="{{ row.match.score }}%">
+                        <span class="match-bar" aria-hidden="true"><span style="--w: {{ row.match.score }}%"></span></span>
+                        {{ row.match.score }}%
+                        {% if row.match.ok %}<span class="badge ok">Pass</span>{% else %}<span class="badge danger">Below {{ match_threshold }}%</span>{% endif %}
+                    </span>
+                    {% else %}
+                    —
+                    {% endif %}
+                </td>
+                <td>{{ row.document.get_status_display }}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="muted">No documents uploaded yet. Complete this profile first, then upload files that match the identifiers.</p>
+    {% endif %}
+</section>
+</div>
+{% endblock %}

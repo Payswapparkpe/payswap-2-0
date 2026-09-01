@@ -1,0 +1,8 @@
+{{ product }}
+
+Order rejected
+{{ body|default:"Your payment order was rejected." }}
+{% if reference %}Order: {{ reference }}
+{% endif %}{% if product_name %}Item: {{ product_name }} · Qty {{ quantity }} · Total ₹{{ total }}
+{% endif %}{% if reason %}Reason: {{ reason }}
+{% endif %}{{ action_url }}

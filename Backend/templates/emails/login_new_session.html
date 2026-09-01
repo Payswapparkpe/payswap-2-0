@@ -1,0 +1,8 @@
+{% extends "emails/layout.html" %}
+{% block content %}
+<h1 style="margin:0 0 12px;font-size:22px;">New sign-in</h1>
+<p style="margin:0 0 16px;line-height:1.5;">A session was created for {{ user.email }}{% if new_device %} on a device we have not seen before{% endif %}.</p>
+<p style="margin:0 0 8px;color:#5b6578;">IP: {{ ip_address|default:"unknown" }}<br>Device: {{ user_agent|default:"unknown" }}</p>
+<p style="margin:0 0 16px;">If this was not you, revoke the session from Security.</p>
+{% include "emails/_cta.html" %}
+{% endblock %}

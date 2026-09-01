@@ -1,0 +1,28 @@
+{% extends shell_layout %}
+{% block heading %}Notifications{% endblock %}
+{% block subhead %}Open an alert to jump to the related record.{% endblock %}
+{% block content %}
+{% if can_send_test_email %}
+<form class="card" method="post">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="test_email">
+    <div class="card-head"><strong>Send a test email</strong></div>
+    <p class="muted">Delivers <code>generic_notice</code> to your address using the live catalog and footer.</p>
+    <p><button type="submit" class="btn secondary btn-sm">Queue test email</button></p>
+</form>
+{% endif %}
+{% for item in notifications %}
+<form class="card notify-item" method="post">
+    {% csrf_token %}
+    <input type="hidden" name="id" value="{{ item.pk }}">
+    <div class="card-head">
+        <strong>{{ item.title }}</strong>
+        {% if item.read_at %}<span class="badge neutral">Read</span>{% else %}<span class="badge info">New</span>{% endif %}
+    </div>
+    <p>{{ item.body }}</p>
+    <p><button type="submit" class="btn secondary btn-sm">Open</button></p>
+</form>
+{% empty %}
+{% include "partials/empty.html" with art="bell" title="No notifications yet" body="Approvals, clarifications, and payment exceptions will appear here." %}
+{% endfor %}
+{% endblock %}

@@ -1,0 +1,84 @@
+{% extends "layouts/merchant.html" %}
+{% block heading %}Order {{ order.public_id }}{% endblock %}
+{% block breadcrumbs %}
+<nav class="breadcrumbs" aria-label="Breadcrumb">
+    <a href="/merchant/orders/">Orders</a>
+    <span aria-hidden="true">/</span>
+    <span aria-current="page">{{ order.public_id }}</span>
+</nav>
+{% endblock %}
+{% block content %}
+<section class="card">
+    <div class="card-head">
+        <h2>Order {{ order.public_id }}</h2>
+        <span class="badge {% if order.status == 'APPROVED' %}ok{% elif order.status == 'REJECTED' or order.status == 'CANCELLED' %}danger{% elif order.status == 'CHANGES_REQUESTED' %}warn{% else %}info{% endif %}">{{ order.get_status_display }}</span>
+    </div>
+    <p class="muted">Revision {{ order.revision }}</p>
+    <p>{{ order.product.name }} · Quantity {{ order.quantity }} · Unit ₹{{ order.unit_value }} · <strong>Total ₹{{ order.total }}</strong></p>
+    <form method="post" action="{% url 'merchant:order_document' order.public_id %}" class="mt-2">
+        {% csrf_token %}
+        <button type="submit" class="secondary">Download purchase order (A4 PDF)</button>
+    </form>
+
+    {% if order.status == 'CHANGES_REQUESTED' %}
+    <div class="banner banner-warn" role="status">
+        Changes were requested on this order. Update the details below and resubmit.
+        {% with order.decisions.last as decision %}{% if decision.reason %}<br>Reason: {{ decision.reason }}{% endif %}{% endwith %}
+    </div>
+    {% endif %}
+
+    <ol class="stepper">
+        <li class="stepper-item {% if order.status != "DRAFT" %}done{% else %} current{% endif %}"><span class="stepper-dot" aria-hidden="true">{% if order.status != "DRAFT" %}&#10003;{% else %}1{% endif %}</span><span>Created</span></li>
+        <li class="stepper-item {% if order.status == "SUBMITTED" or order.status == "CHANGES_REQUESTED" %} current{% elif order.status == "UNDER_REVIEW" or order.status == "APPROVED" %}done{% endif %}"><span class="stepper-dot" aria-hidden="true">{% if order.status == "UNDER_REVIEW" or order.status == "APPROVED" %}&#10003;{% else %}2{% endif %}</span><span>Submitted</span></li>
+        <li class="stepper-item {% if order.status == "UNDER_REVIEW" %} current{% elif order.status == "APPROVED" %}done{% endif %}"><span class="stepper-dot" aria-hidden="true">{% if order.status == "APPROVED" %}&#10003;{% else %}3{% endif %}</span><span>Under review</span></li>
+        <li class="stepper-item {% if order.status == "APPROVED" %} done current{% endif %}"><span class="stepper-dot" aria-hidden="true">{% if order.status == "APPROVED" %}&#10003;{% else %}4{% endif %}</span><span>Approved</span></li>
+    </ol>
+
+    {% if can_edit %}
+    <details class="mt-4" {% if order.status == 'CHANGES_REQUESTED' %}open{% endif %}>
+        <summary>Edit order</summary>
+        <form method="post" class="mt-2">
+            {% csrf_token %}
+            <label class="field">Product
+                <select name="product">
+                    {% for product in products %}
+                    <option value="{{ product.pk }}" {% if product.pk == order.product_id %}selected{% endif %}>{{ product.name }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label class="field">Quantity
+                <input type="number" name="quantity" min="1" value="{{ order.quantity }}" placeholder="Enter quantity">
+            </label>
+            <div class="action-row">
+                <button type="submit" name="action" value="edit" class="secondary">Save changes</button>
+                <button type="submit" name="action" value="submit">Submit for review</button>
+            </div>
+        </form>
+    </details>
+    {% endif %}
+
+    {% if can_cancel %}
+    <form method="post" class="mt-4">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="cancel">
+        <button type="submit" class="danger">Cancel order</button>
+    </form>
+    {% endif %}
+</section>
+
+<section class="card">
+    <h2>History</h2>
+    {% if order.events.all %}
+    <ol class="timeline">
+        {% for event in order.events.all %}
+        <li>
+            <strong>{{ event.get_to_status_display|default:event.to_status }}</strong>
+            <span class="muted"> — {{ event.created_at|date:"d M Y H:i" }}{% if event.reason %} · {{ event.reason }}{% endif %}</span>
+        </li>
+        {% endfor %}
+    </ol>
+    {% else %}
+    <p class="muted">No events yet.</p>
+    {% endif %}
+</section>
+{% endblock %}

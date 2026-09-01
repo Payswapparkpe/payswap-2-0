@@ -1,0 +1,38 @@
+{% extends "layouts/merchant.html" %}
+{% block heading %}Start onboarding{% endblock %}
+{% block subhead %}Choose the type of business. You will enter PAN, people, bank, and documents in the next steps.{% endblock %}
+{% block content %}
+<section class="paper-sheet form-card">
+    <div class="card-head">
+        <div>
+            <h2>Legal entity</h2>
+            <p class="muted">This decides whether we collect GSTIN, CIN, or LLPIN alongside PAN.</p>
+        </div>
+        <svg class="sheet-ico" aria-hidden="true"><use href="#i-store"/></svg>
+    </div>
+    {% if application and application.status != "DRAFT" %}
+    <p class="status-copy">Continue application <strong>{{ application.public_id }}</strong> — {{ application.get_status_display }}.</p>
+    <p class="action-row"><a class="btn" href="/merchant/onboarding/{{ application.public_id }}/">Continue</a></p>
+    {% else %}
+    <form method="post">
+        {% csrf_token %}
+        {% if application %}
+        <p class="muted">Application {{ application.public_id }} — you can still set the entity type.</p>
+        {% endif %}
+        <label class="field">
+            <span class="field-title">Type of business <span class="required-mark">*</span></span>
+            <span class="field-control">
+                <svg class="field-control-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-store"/></svg>
+                <select name="entity_type">
+                    {% for value, label in entity_types %}
+                    <option value="{{ value }}" {% if application and application.merchant.entity_type == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </span>
+        </label>
+        <p class="help">Next: Business details (including PAN) → People → Bank → Documents → Review &amp; submit.</p>
+        <button type="submit">{% if application %}Continue{% else %}Start{% endif %}</button>
+    </form>
+    {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,7 @@
+{{ product }}
+
+Agreement eSign did not complete
+{{ body|default:"eSign for your agreement did not complete. Sign in to retry." }}
+{% if reference %}Agreement: {{ reference }}
+{% endif %}{% if reason %}Reason: {{ reason }}
+{% endif %}{{ action_url }}

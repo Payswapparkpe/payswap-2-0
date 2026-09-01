@@ -1,0 +1,30 @@
+{% extends "layouts/administration.html" %}
+{% block heading %}Orders{% endblock %}
+{% block content %}
+<form method="get" class="card toolbar">
+    <label class="field">
+        <span class="field-title">From</span>
+        <input type="text" name="date_from" value="{{ date_from }}" data-datepicker placeholder="Start date" autocomplete="off">
+    </label>
+    <label class="field">
+        <span class="field-title">To</span>
+        <input type="text" name="date_to" value="{{ date_to }}" data-datepicker placeholder="End date" autocomplete="off">
+    </label>
+    <button type="submit">Search orders</button>
+</form>
+<div class="card table-wrap"><table>
+<thead><tr><th>Order ID</th><th>Merchant</th><th>Status</th><th class="num">Total</th></tr></thead>
+<tbody>
+{% for order in orders %}
+<tr>
+    <td>{{ order.public_id }}</td>
+    <td>{{ order.merchant.public_id }}</td>
+    <td><span class="badge {% if order.status == 'APPROVED' %}ok{% elif order.status == 'REJECTED' %}danger{% else %}neutral{% endif %}">{{ order.get_status_display }}</span></td>
+    <td class="num">₹{{ order.total }}</td>
+</tr>
+{% empty %}
+<tr><td colspan="4">No orders in this view.</td></tr>
+{% endfor %}
+</tbody></table></div>
+{% include "partials/pager.html" %}
+{% endblock %}

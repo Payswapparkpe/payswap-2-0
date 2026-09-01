@@ -1,0 +1,16 @@
+{% if record %}
+<dl class="kv{% if record.display_reason %} stack{% endif %}">
+    {% if record.document_masked %}<div><dt>Identifier</dt><dd>{{ record.document_masked }}</dd></div>{% endif %}
+    {% if record.verified_name %}<div><dt>Registered name</dt><dd>{{ record.verified_name }}</dd></div>{% endif %}
+    {% if record.completed_at %}<div><dt>Verified on</dt><dd>{{ record.completed_at|date:"d M Y" }}</dd></div>{% endif %}
+    {% if record.expires_at %}<div><dt>Valid until</dt><dd>{{ record.expires_at|date:"d M Y" }}</dd></div>{% endif %}
+    {% if record.reference_id %}<div><dt>Reference</dt><dd>{{ record.reference_id }}</dd></div>{% endif %}
+    <div><dt>Source</dt><dd>Cashfree</dd></div>
+    {% if record.reused_from_id %}<div><dt>Reuse</dt><dd>Verified previously</dd></div>{% endif %}
+    {% if record.display_reason %}<div><dt>Reason</dt><dd>{{ record.display_reason }}</dd></div>{% endif %}
+</dl>
+{% elif rollup == "VERIFIED" %}
+<p class="muted">Marked verified on your merchant file. Run “Verify collected details” to refresh provider evidence if needed.</p>
+{% else %}
+<p class="muted">Not checked yet. Use “Verify collected details” after onboarding is submitted.</p>
+{% endif %}

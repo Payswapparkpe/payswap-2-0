@@ -1,0 +1,6 @@
+{{ product }}
+
+{{ title|default:"Account notice" }}
+{{ body|default:"There is an update on your account." }}
+{% if reference %}Reference: {{ reference }}
+{% endif %}{{ action_url }}

@@ -1,0 +1,55 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+{% block title %}Administration{% endblock %}
+{% block vendor_css %}{% include "partials/portal_vendor_css.html" %}{% endblock %}
+{% block vendor_js %}
+{% include "partials/portal_vendor.html" %}
+{% endblock %}
+{% block chrome_footer %}{% endblock %}
+{% block body %}
+<div class="app" data-shell="administration">
+    <nav class="nav" id="portal-nav" aria-label="Administration">
+        {% include "partials/portal_brand.html" with brand_subtitle="Command centre" %}
+        <div class="nav-scroll">
+            <p class="nav-group">Overview</p>
+            <a href="/administration/" {% if request.path == "/administration/" %}aria-current="page"{% endif %}><svg class="nav-ico" aria-hidden="true"><use href="#i-home"/></svg><span>Dashboard</span></a>
+            <a href="/administration/audit/" {% if "/audit/" in request.path %}aria-current="page"{% endif %}><svg class="nav-ico" aria-hidden="true"><use href="#i-shield"/></svg><span>Audit</span></a>
+            <p class="nav-group">Operations</p>
+            <a href="/administration/merchants/" {% if "/merchants/" in request.path %}aria-current="page"{% endif %}><svg class="nav-ico" aria-hidden="true"><use href="#i-store"/></svg><span>Merchants</span></a>
+            <a href="/administration/verification/" {% if "/verification/" in request.path %}aria-current="page"{% endif %}><svg class="nav-ico" aria-hidden="true"><use href="#i-shield"/></svg><span>Verification</span></a>
+            <a href="/administration/onboarding/" {% if "/onboarding/" in request.path %}aria-current="page"{% endif %}><svg class="nav-ico" aria-hidden="true"><use href="#i-clip"/></svg><span>Onboarding</span></a>
+            <a href="/administration/orders/" {% if "/orders/" in request.path %}aria-current="page"{% endif %}><svg class="nav-ico" aria-hidden="true"><use href="#i-cart"/></svg><span>Orders</span></a>
+            <p class="nav-group">Control</p>
+            <a href="/administration/employees/" {% if "/employees/" in request.path %}aria-current="page"{% endif %}><svg class="nav-ico" aria-hidden="true"><use href="#i-people"/></svg><span>Employees</span></a>
+            <a href="/administration/roles/" {% if "/roles/" in request.path %}aria-current="page"{% endif %}><svg class="nav-ico" aria-hidden="true"><use href="#i-key"/></svg><span>Roles</span></a>
+            <a href="/administration/security/" {% if "/security/" in request.path %}aria-current="page"{% endif %}><svg class="nav-ico" aria-hidden="true"><use href="#i-shield"/></svg><span>Security</span></a>
+            <a href="/administration/search/" {% if "/search/" in request.path %}aria-current="page"{% endif %}><svg class="nav-ico" aria-hidden="true"><use href="#i-search"/></svg><span>Search</span></a>
+            <a href="/administration/notifications/" {% if "/notifications/" in request.path %}aria-current="page"{% endif %}><svg class="nav-ico" aria-hidden="true"><use href="#i-bell"/></svg><span>Notifications</span></a>
+        </div>
+        {% include "partials/portal_nav_user.html" %}
+    </nav>
+    <div class="main">
+        <div class="topbar">
+            <button class="nav-toggle" type="button" data-nav-toggle aria-controls="portal-nav" aria-expanded="false">Menu</button>
+            <div class="title-block">
+                {% block breadcrumbs %}{% endblock %}
+                <h1>{% block heading %}Dashboard{% endblock %}</h1>
+                <p class="page-lead">{% block subhead %}{% endblock %}</p>
+            </div>
+            <button class="nav-collapse" type="button" data-nav-collapse aria-pressed="false" aria-label="Collapse navigation" title="Toggle navigation"><svg class="nav-ico" aria-hidden="true"><use href="#i-menu"/></svg></button>
+            <form class="top-search" method="get" action="{{ search_url }}" role="search">
+                <label class="sr-only" for="global-q">Search</label>
+                <svg class="search-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-search"/></svg>
+                <input id="global-q" name="q" placeholder="Search merchants" autocomplete="off">
+                <button type="submit" class="btn ghost" aria-label="Search">Go</button>
+            </form>
+            <a class="notify-pill" href="{{ notifications_url }}"><span>Alerts</span><strong data-unread>{{ unread_notification_count }}</strong></a>
+            {% include "partials/portal_user_menu.html" %}
+        </div>
+        <div id="content">
+            {% block content %}{% endblock %}
+        </div>
+        {% include "partials/site_footer.html" %}
+    </div>
+</div>
+{% endblock %}

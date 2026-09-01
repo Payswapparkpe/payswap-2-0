@@ -1,0 +1,16 @@
+{% load static %}
+<ol class="stepper" aria-label="{{ aria_label|default:'Progress' }}">
+    {% for item in steps %}
+    <li class="stepper-item
+        {% if item.state == 'done' %}done{% endif %}
+        {% if item.state == 'current' %}current{% endif %}">
+        <span class="stepper-dot" aria-hidden="true">
+            {% if item.state == 'done' %}&#10003;{% else %}{{ forloop.counter }}{% endif %}
+        </span>
+        <span>
+            {% if item.url %}<a href="{{ item.url }}">{{ item.label }}</a>
+            {% else %}{{ item.label }}{% endif %}
+        </span>
+    </li>
+    {% endfor %}
+</ol>

@@ -1,0 +1,29 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+{% block title %}Authenticator setup{% endblock %}
+{% block body_class %}auth-page{% endblock %}
+{% block chrome_footer %}{% endblock %}
+{% block body %}
+<main class="auth-shell" id="content">
+    {% include "partials/auth_story.html" with heading="Protect this session" lead="Add the secret to your authenticator app, then confirm the current six-digit code." %}
+    <div class="auth-panel">
+        <section class="card auth-card">
+            <header class="auth-card-head">
+                <div>
+                    <h2>Set up an authenticator</h2>
+                </div>
+                {% include "partials/auth_brand.html" %}
+            </header>
+            {% include "partials/form_status.html" with extra_error=error %}
+            {% if secret %}<p class="secret">Secret: <code>{{ secret }}</code></p>{% endif %}
+            <form method="post" novalidate data-validate-form>
+                {% csrf_token %}
+                <div class="form-status form-alerts" role="alert"></div>
+                {% include "partials/otp_input.html" with name="token" label="Authenticator OTP" error=error %}
+                <button type="submit">Confirm</button>
+            </form>
+        </section>
+        {% include "partials/legal_footer.html" %}
+    </div>
+</main>
+{% endblock %}

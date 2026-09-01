@@ -1,0 +1,7 @@
+{{ product }}
+
+New sign-in for {{ user.email }}{% if new_device %} (new device){% endif %}
+IP: {{ ip_address|default:"unknown" }}
+Device: {{ user_agent|default:"unknown" }}
+
+If this was not you, revoke the session: {{ action_url }}

@@ -1,0 +1,122 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+{% block title %}Create account — Merchant{% endblock %}
+{% block body_class %}auth-page{% endblock %}
+{% block chrome_footer %}{% endblock %}
+{% block body %}
+<main class="auth-shell" id="content">
+    {% include "partials/auth_story.html" with heading="Open a merchant studio" lead="Verify email and mobile, accept the terms, then sign in to complete your business profile." %}
+    <div class="auth-panel">
+        <section class="card auth-card">
+            <header class="auth-card-head">
+                <div>
+                    <h2>Create merchant account</h2>
+                </div>
+                {% include "partials/auth_brand.html" %}
+            </header>
+            {% include "partials/stepper.html" with steps=wizard_steps aria_label="Registration" %}
+            {% include "partials/form_status.html" %}
+
+            {% if step == "details" %}
+            <form method="post" novalidate data-validate-form>
+                {% csrf_token %}
+                <input type="hidden" name="step" value="details">
+                <div class="form-status form-alerts" role="alert"></div>
+                <div class="auth-form-grid">
+                    {% include "partials/field.html" with field=form.name icon="i-user" span="1" %}
+                    {% include "partials/field.html" with field=form.email icon="i-mail" %}
+                    {% include "partials/field.html" with field=form.mobile icon="i-phone" %}
+                    {% include "partials/field.html" with field=form.address icon="i-pin" span="1" %}
+                    {% include "partials/field.html" with field=form.pincode icon="i-pin" %}
+                    {% include "partials/field.html" with field=form.entity_type icon="i-store" %}
+                    {% include "partials/field.html" with field=form.password icon="i-lock" %}
+                    {% include "partials/field.html" with field=form.confirm_password icon="i-lock" %}
+                </div>
+                <button type="submit" name="action" value="continue">Continue</button>
+            </form>
+
+            {% elif step == "verify" %}
+            {% if test_mode %}<p class="muted auth-lead">Test OTP: 123456.</p>{% endif %}
+            <div class="auth-otp-grid">
+            <form class="otp-block" method="post" novalidate data-validate-form>
+                {% csrf_token %}
+                <input type="hidden" name="step" value="verify">
+                <div class="form-status form-alerts" role="alert"></div>
+                {% include "partials/otp_input.html" with name="email_code" label="Email OTP" error=otp_error_email verified=preview.email_verified destination=preview.email %}
+                {% if debug_email %}<p class="muted">Dev code: {{ debug_email }}</p>{% endif %}
+                {% if not preview.email_verified %}
+                <div class="otp-toolbar">
+                    <div class="otp-resend">
+                        <span data-otp-countdown data-seconds="{{ otp_wait_email }}"{% if not otp_wait_email %} hidden{% endif %}>Resend in 0:{{ otp_wait_email|stringformat:"02d" }}</span>
+                        <button class="btn-text" type="submit" name="action" value="send_email_otp" formnovalidate data-otp-resend{% if otp_wait_email %} hidden{% endif %}>Resend</button>
+                    </div>
+                    <button class="otp-verify" type="submit" name="action" value="confirm_email">Verify</button>
+                </div>
+                {% endif %}
+            </form>
+            <form class="otp-block" method="post" novalidate data-validate-form>
+                {% csrf_token %}
+                <input type="hidden" name="step" value="verify">
+                <div class="form-status form-alerts" role="alert"></div>
+                {% include "partials/otp_input.html" with name="mobile_code" label="Mobile OTP" error=otp_error_mobile verified=preview.mobile_verified destination=preview.mobile %}
+                {% if debug_mobile %}<p class="muted">Dev code: {{ debug_mobile }}</p>{% endif %}
+                {% if not preview.mobile_verified %}
+                <div class="otp-toolbar">
+                    <div class="otp-resend">
+                        <span data-otp-countdown data-seconds="{{ otp_wait_mobile }}"{% if not otp_wait_mobile %} hidden{% endif %}>Resend in 0:{{ otp_wait_mobile|stringformat:"02d" }}</span>
+                        <button class="btn-text" type="submit" name="action" value="send_mobile_otp" formnovalidate data-otp-resend{% if otp_wait_mobile %} hidden{% endif %}>Resend</button>
+                    </div>
+                    <button class="otp-verify" type="submit" name="action" value="confirm_mobile">Verify</button>
+                </div>
+                {% endif %}
+            </form>
+            </div>
+            <form method="post" class="auth-nav-row">
+                {% csrf_token %}
+                <input type="hidden" name="step" value="verify">
+                <div class="action-row">
+                    <a class="btn secondary" href="?step=details">Back</a>
+                    <button type="submit" name="action" value="continue">Continue</button>
+                </div>
+            </form>
+
+            {% elif step == "preview" %}
+            <p class="review-copy">
+                <strong>{{ preview.name }}</strong> will sign in with {{ preview.email }}
+                {% if preview.email_verified %}(verified){% endif %}
+                and {{ preview.mobile }}
+                {% if preview.mobile_verified %}(verified){% endif %}.
+                {% if preview.address %}Address: {{ preview.address }}{% if preview.pincode %}, {{ preview.pincode }}{% endif %}.{% endif %}
+                Business type: {{ preview.entity_type_label }}.
+                The password you chose is not shown here.
+            </p>
+            <form method="post" novalidate data-validate-form>
+                {% csrf_token %}
+                <input type="hidden" name="step" value="preview">
+                <div class="form-status form-alerts" role="alert"></div>
+                <div class="field">
+                    <label class="field-check" for="id_accept_terms">
+                        {{ form.accept_terms }}
+                        <span>
+                            I accept the
+                            <a href="/legal/terms/" target="_blank" rel="noopener">Terms and Conditions</a>
+                            and
+                            <a href="/legal/privacy/" target="_blank" rel="noopener">Privacy Policy</a>.
+                        </span>
+                    </label>
+                    <span class="field-alert" data-field-alert>{{ form.accept_terms.errors.0 }}</span>
+                </div>
+                <div class="action-row">
+                    <a class="btn secondary" href="?step=verify">Back</a>
+                    <button type="submit" name="action" value="finish">Create account</button>
+                </div>
+            </form>
+
+            {% endif %}
+
+            <p class="auth-alt"><a href="/login/">Already have an account? Sign in</a></p>
+        </section>
+        {% include "partials/legal_footer.html" %}
+    </div>
+</main>
+{% endblock %}

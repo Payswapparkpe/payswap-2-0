@@ -1,0 +1,46 @@
+{% extends shell_layout %}
+{% block heading %}Profile{% endblock %}
+{% block subhead %}Your name and contact details for this workspace.{% endblock %}
+{% block content %}
+<section class="paper-sheet profile-hero">
+    <div class="avatar-lg" aria-hidden="true">{{ request.user.initials }}</div>
+    <div class="profile-meta">
+        <h2>{{ request.user.display_name }}</h2>
+        <p class="muted">{{ request.user.get_user_type_display }}{% if request.user.department %} · {{ request.user.department.name }}{% endif %}</p>
+        <p>{{ request.user.email }}</p>
+        <p>{{ request.user.mobile|default:"Mobile not provided" }}</p>
+        <p class="action-row">
+            <a class="btn" href="{{ security_url }}"><svg class="btn-ico" aria-hidden="true"><use href="#i-cog"/></svg> Account settings</a>
+            <a class="btn secondary" href="{{ sessions_url }}"><svg class="btn-ico" aria-hidden="true"><use href="#i-key"/></svg> Sessions &amp; devices</a>
+        </p>
+    </div>
+</section>
+
+<section class="paper-sheet">
+    <div class="card-head">
+        <div>
+            <h3>Sign-in details</h3>
+            <p class="muted">Shown in the header and used for account alerts.</p>
+        </div>
+        <svg class="sheet-ico" aria-hidden="true"><use href="#i-user"/></svg>
+    </div>
+    <form method="post" novalidate data-validate-form>
+        {% csrf_token %}
+        <label class="field">
+            <span class="field-title">Full name <span class="required-mark">*</span></span>
+            <span class="field-control">
+                <svg class="field-control-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-user"/></svg>
+                <input type="text" name="name" value="{{ request.user.name }}" maxlength="150" autocomplete="name" data-validate="required" placeholder="Enter your full name">
+            </span>
+        </label>
+        <label class="field">
+            <span class="field-title">Mobile</span>
+            <span class="field-control">
+                <svg class="field-control-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-phone"/></svg>
+                <input type="text" name="mobile" value="{{ request.user.mobile }}" inputmode="numeric" maxlength="10" data-validate="mobile" placeholder="Enter mobile number">
+            </span>
+        </label>
+        <button type="submit">Save profile</button>
+    </form>
+</section>
+{% endblock %}

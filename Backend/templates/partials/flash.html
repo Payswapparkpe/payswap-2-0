@@ -1,0 +1,15 @@
+{% if messages %}
+<div class="toasts" role="region" aria-label="Messages" aria-live="polite">
+    {% for message in messages %}
+        {% if "error" in message.tags %}
+            {% include "partials/notice.html" with notice_class="toast toast-error" role="alert" icon="i-alert" text=message timeout="8000" dismissible="1" %}
+        {% elif "warning" in message.tags %}
+            {% include "partials/notice.html" with notice_class="toast toast-warn" role="status" icon="i-alert" text=message timeout="7000" dismissible="1" %}
+        {% elif "success" in message.tags %}
+            {% include "partials/notice.html" with notice_class="toast toast-ok" role="status" icon="i-check" text=message timeout="5000" dismissible="1" %}
+        {% else %}
+            {% include "partials/notice.html" with notice_class="toast toast-info" role="status" icon="i-bell" text=message timeout="5000" dismissible="1" %}
+        {% endif %}
+    {% endfor %}
+</div>
+{% endif %}
