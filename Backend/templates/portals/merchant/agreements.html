@@ -20,7 +20,7 @@
 {% if agreements %}
 <div class="card table-wrap">
     <table class="js-datatable display nowrap w-100">
-        <thead><tr><th>Agreement</th><th>Status</th><th>Version</th><th>Issued</th></tr></thead>
+        <thead><tr><th scope="col">Agreement</th><th scope="col">Status</th><th scope="col">Version</th><th scope="col">Issued</th></tr></thead>
         <tbody>
         {% for item in agreements %}
         <tr>
@@ -95,7 +95,7 @@
         <form method="post" class="mt-3">
             {% csrf_token %}
             <label class="field field-check">
-                <input type="checkbox" required>
+                <input type="checkbox" name="consent" value="yes" required>
                 I have reviewed this agreement and consent to signing it electronically using Aadhaar eSign.
             </label>
             <div class="action-row">
@@ -130,7 +130,7 @@
     {% if selected and selected.events.all %}
     <div class="table-wrap mt-3">
         <table class="js-datatable display nowrap w-100">
-            <thead><tr><th>When</th><th>Event</th><th>Actor</th><th>IP</th></tr></thead>
+            <thead><tr><th scope="col">When</th><th scope="col">Event</th><th scope="col">Actor</th><th scope="col">IP</th></tr></thead>
             <tbody>
             {% for event in selected.events.all %}
                 <tr>

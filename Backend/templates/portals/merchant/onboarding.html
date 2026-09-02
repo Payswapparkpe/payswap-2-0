@@ -62,7 +62,7 @@
         {% if people %}
         <div class="table-wrap">
             <table>
-                <thead><tr><th>Name</th><th>Designation</th><th>Ownership %</th><th>Signatory</th><th></th></tr></thead>
+                <thead><tr><th scope="col">Name</th><th scope="col">Designation</th><th scope="col">Ownership %</th><th scope="col">Signatory</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
                 <tbody>
                 {% for person in people %}
                 <tr>
@@ -75,7 +75,8 @@
                             {% csrf_token %}
                             <input type="hidden" name="step" value="owners">
                             <input type="hidden" name="index" value="{{ forloop.counter0 }}">
-                            <button class="btn ghost btn-sm" type="submit" name="action" value="remove_person">Remove</button>
+                            <button class="btn ghost btn-sm" type="submit" name="action" value="remove_person"
+                                    data-confirm-submit="Remove this person from the application?">Remove</button>
                         </form>
                     </td>
                 </tr>
@@ -133,7 +134,7 @@
         {% if document_rows %}
         <div class="table-wrap">
             <table class="js-datatable display nowrap w-100">
-                <thead><tr><th>Type</th><th>ID</th><th>Match</th><th>Status</th><th>Notes</th></tr></thead>
+                <thead><tr><th scope="col">Type</th><th scope="col">ID</th><th scope="col">Match</th><th scope="col">Status</th><th scope="col">Notes</th></tr></thead>
                 <tbody>
                 {% for row in document_rows %}
                 <tr>

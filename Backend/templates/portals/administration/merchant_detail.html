@@ -9,183 +9,283 @@
 </nav>
 {% endblock %}
 {% block content %}
-<div class="grid grid-side">
-    <aside class="card status-panel">
-        <div>KYC <strong>{{ merchant.get_kyc_status_display }}</strong></div>
-        <div>KYB <strong>{{ merchant.get_kyb_status_display }}</strong></div>
-        <div>Bank <strong>{{ merchant.get_bank_status_display }}</strong></div>
-        <div>Agreement <strong>{{ merchant.get_agreement_status_display }}</strong></div>
-        <div>Risk <strong>{{ merchant.get_risk_status_display }}</strong></div>
-        <div>Commercial <strong>{{ merchant.get_commercial_status_display }}</strong></div>
-    </aside>
-    <section class="card">
-        <div class="tabs" role="tablist" aria-label="Merchant sections">
-            <a class="tab" href="?tab=overview" {% if tab != "documents" and tab != "verification" and tab != "orders" and tab != "agreements" and tab != "audit" %}aria-current="page"{% endif %}>Overview</a>
-            <a class="tab" href="?tab=documents" {% if tab == "documents" %}aria-current="page"{% endif %}>Documents</a>
-            <a class="tab" href="?tab=verification" {% if tab == "verification" %}aria-current="page"{% endif %}>Verification</a>
-            <a class="tab" href="?tab=orders" {% if tab == "orders" %}aria-current="page"{% endif %}>Orders</a>
-            <a class="tab" href="?tab=agreements" {% if tab == "agreements" %}aria-current="page"{% endif %}>Agreement</a>
-            <a class="tab" href="?tab=audit" {% if tab == "audit" %}aria-current="page"{% endif %}>Audit</a>
+<div class="grid grid-side merchant-detail">
+    <aside class="card merchant-aside">
+        <div class="merchant-aside-head">
+            <span class="badge {% if merchant.status == 'ACTIVE' %}ok{% elif merchant.status == 'SUSPENDED' %}danger{% else %}neutral{% endif %}">{{ merchant.get_status_display }}</span>
+            <p class="muted">{{ merchant.owner.email }}</p>
         </div>
+        <div class="status-meters">
+            <div class="status-meter">
+                <span>KYC</span>
+                <strong>{{ merchant.get_kyc_status_display }}</strong>
+            </div>
+            <div class="status-meter">
+                <span>KYB</span>
+                <strong>{{ merchant.get_kyb_status_display }}</strong>
+            </div>
+            <div class="status-meter">
+                <span>Bank</span>
+                <strong>{{ merchant.get_bank_status_display }}</strong>
+            </div>
+            <div class="status-meter">
+                <span>Agreement</span>
+                <strong>{{ merchant.get_agreement_status_display }}</strong>
+            </div>
+            <div class="status-meter">
+                <span>Risk</span>
+                <strong>{{ merchant.get_risk_status_display }}</strong>
+            </div>
+            <div class="status-meter">
+                <span>Commercial</span>
+                <strong>{{ merchant.get_commercial_status_display }}</strong>
+            </div>
+        </div>
+        {% if application %}
+        <div class="merchant-quick-links">
+            <a class="quick-link" href="?tab=documents">Documents <span class="tab-count">{{ tab_counts.documents }}</span></a>
+            <a class="quick-link" href="?tab=verification">Checks <span class="tab-count">{{ tab_counts.verification }}</span></a>
+            <a class="quick-link" href="?tab=agreements">Agreement <span class="tab-count">{{ tab_counts.agreements }}</span></a>
+            {% if scores.mismatch_count %}
+            <a class="quick-link quick-link--alert" href="#review-match-heading">Mismatches <span class="tab-count is-alert">{{ scores.mismatch_count }}</span></a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </aside>
+    <section class="card merchant-main">
+        <nav class="tabs" aria-label="Merchant sections">
+            {% for slug, label in tabs.items %}
+            <a class="tab" href="?tab={{ slug }}" {% if tab == slug %}aria-current="page"{% endif %}>
+                {{ label }}
+                {% if slug == "documents" and tab_counts.documents %}<span class="tab-count">{{ tab_counts.documents }}</span>{% endif %}
+                {% if slug == "verification" and tab_counts.verification %}<span class="tab-count">{{ tab_counts.verification }}</span>{% endif %}
+                {% if slug == "orders" and tab_counts.orders %}<span class="tab-count">{{ tab_counts.orders }}</span>{% endif %}
+            </a>
+            {% endfor %}
+        </nav>
+
         {% if tab == "documents" %}
-            {% for document in documents %}
-            <div class="step">
-                <div>
-                    {{ document.get_doc_type_display }} · {{ document.public_id }} · {{ document.get_status_display }}
-                    {% if document.slot_id %}<span class="muted">· slot {{ document.slot_id }}</span>{% endif %}
-                    {% if document.version > 1 %}<span class="muted">· v{{ document.version }}</span>{% endif %}
-                </div>
-                {% if document.rejection_reason %}<p class="muted">{{ document.rejection_reason }}</p>{% endif %}
-                <div class="action-row">
-                    {% if document.file %}
-                    <form method="post" action="/administration/documents/{{ document.public_id }}/download/">
-                        {% csrf_token %}
-                        <button class="secondary" type="submit">Download</button>
-                    </form>
-                    {% else %}
-                    <span class="muted">No file stored.</span>
-                    {% endif %}
-                    {% if document.status != "VERIFIED" and document.status != "REJECTED" %}
-                    <form method="post" action="/administration/documents/{{ document.public_id }}/">
-                        {% csrf_token %}
-                        <input type="hidden" name="action" value="approve">
-                        <button type="submit">Approve</button>
-                    </form>
-                    {% endif %}
-                </div>
-                {% if document.status != "VERIFIED" and document.status != "REJECTED" %}
-                <div class="action-row">
-                    <form method="post" action="/administration/documents/{{ document.public_id }}/" class="reject-form">
-                        {% csrf_token %}
-                        <input type="hidden" name="action" value="reject">
-                        <label class="field grow">Rejection reason
-                            <input name="reason" required placeholder="Enter reason">
-                        </label>
-                        <button class="danger" type="submit">Reject</button>
-                    </form>
-                    <form method="post" action="/administration/documents/{{ document.public_id }}/" class="reject-form">
-                        {% csrf_token %}
-                        <input type="hidden" name="action" value="request_replacement">
-                        <label class="field grow">Ask for a replacement
-                            <input name="reason" required placeholder="What should the merchant re-upload?">
-                        </label>
-                        <button class="secondary" type="submit">Request replacement</button>
-                    </form>
-                </div>
-                {% endif %}
-            </div>
-            {% empty %}
-            <p class="muted">No documents uploaded.</p>
-            {% endfor %}
+        <div class="tab-intro">
+            <h2>Uploaded documents</h2>
+            <p class="muted">Review KYB uploads, auth instruments, and self-attested KYC. Image previews appear in local development when media serving is enabled.</p>
+        </div>
+        {% include "portals/includes/review_documents.html" with document_cards=document_cards download_prefix="/administration/documents/" document_actions=True %}
+
         {% elif tab == "verification" %}
-            <p class="muted">Registry and bank checks run against Cashfree for this merchant.</p>
-            {% for record in verifications %}
-            <div class="step">
-                <span>{{ record.get_verification_type_display }} · {{ record.public_id }}</span>
-                <span class="badge {% if record.status == 'SUCCESS' %}ok{% elif record.status == 'FAILED' %}danger{% else %}neutral{% endif %}">{{ record.get_status_display }}</span>
-            </div>
-            <p class="muted">{{ record.created_at }}{% if record.expires_at %} · expires {{ record.expires_at }}{% endif %}</p>
-            {% empty %}
-            <p class="muted">No verification attempts recorded.</p>
-            {% endfor %}
+        <div class="tab-intro">
+            <h2>Verification checks</h2>
+            <p class="muted">Full outcomes from Cashfree and DigiLocker — registry names, bank match, addresses, and provider API responses.</p>
+        </div>
+        {% include "portals/includes/review_verifications.html" with verification_cards=verification_cards %}
+
         {% elif tab == "orders" %}
-            {% for order in orders %}
-            <p>{{ order.public_id }} · {{ order.get_status_display }} · ₹{{ order.total }}</p>
-            {% empty %}<p class="muted">No orders yet.</p>{% endfor %}
-        {% elif tab == "agreements" %}
-            <p class="muted">Issued only after KYC, KYB, and bank verification. Merchant signs with Aadhaar eSign; then countersign.</p>
-            {% for agreement in agreements %}
-            <p>{{ agreement.public_id }} · v{{ agreement.version }} · {{ agreement.get_status_display }}</p>
-            <pre class="agreement-body">{{ agreement.body }}</pre>
-            {% empty %}<p class="muted">No agreement generated.</p>{% endfor %}
-            <div class="action-row">
-            <form method="post">{% csrf_token %}<input type="hidden" name="action" value="generate_agreement"><button type="submit">Generate prefilled agreement</button></form>
-            <form method="post">{% csrf_token %}<input type="hidden" name="action" value="countersign"><button class="secondary" type="submit">Countersign</button></form>
-            </div>
-        {% elif tab == "audit" %}
-            {% for event in audit_events %}
-            <p>{{ event.created_at }} · {{ event.action }} · {{ event.result }}</p>
-            {% empty %}<p class="muted">No audit events for this merchant.</p>{% endfor %}
+        <div class="tab-intro"><h2>Orders</h2></div>
+        {% if orders %}
+        <div class="table-wrap">
+            <table>
+                <caption class="sr-only">Orders placed by {{ merchant.business_name }}</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">Order</th>
+                        <th scope="col">Status</th>
+                        <th scope="col" class="num">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in orders %}
+                    <tr>
+                        <th scope="row"><code>{{ order.public_id }}</code></th>
+                        <td>{{ order.get_status_display }}</td>
+                        <td class="num tabular">₹{{ order.total }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
         {% else %}
-            <p>Owner: {{ merchant.owner.email }}</p>
+        <p class="muted">No orders yet.</p>
+        {% endif %}
+
+        {% elif tab == "agreements" %}
+        <div class="tab-intro">
+            <h2>Commercial agreement</h2>
+            <p class="muted">Issued after KYC, KYB, and bank verification. Merchant signs with Aadhaar eSign; then countersign.</p>
+        </div>
+        {% for agreement in agreements %}
+        <article class="doc-row">
+            <div class="doc-row-head">
+                <div class="doc-row-title">
+                    <h3>{{ agreement.public_id }}</h3>
+                    <p class="muted">Version {{ agreement.version }}</p>
+                </div>
+                <span class="badge {% if agreement.status == 'ACTIVE' %}ok{% else %}neutral{% endif %}">{{ agreement.get_status_display }}</span>
+            </div>
+            <pre class="agreement-body">{{ agreement.body }}</pre>
+        </article>
+        {% empty %}<p class="muted">No agreement generated.</p>{% endfor %}
+        <div class="action-row">
+            <form method="post" data-confirm-submit="Generate a prefilled agreement for {{ merchant.business_name }}?">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="generate_agreement">
+                <button type="submit">Generate prefilled agreement</button>
+            </form>
+            <form method="post" data-confirm-submit="Countersign this agreement on behalf of Payswap? This activates the merchant agreement.">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="countersign">
+                <button class="secondary" type="submit">Countersign</button>
+            </form>
+        </div>
+
+        {% elif tab == "audit" %}
+        <div class="tab-intro"><h2>Audit trail</h2></div>
+        {% if audit_events %}
+        <div class="table-wrap">
+            <table>
+                <caption class="sr-only">Audit trail for {{ merchant.business_name }}</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">When</th>
+                        <th scope="col">Action</th>
+                        <th scope="col">Result</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for event in audit_events %}
+                    <tr>
+                        <td class="nowrap">{{ event.created_at|date:"j M Y, H:i" }}</td>
+                        <th scope="row">{{ event.action }}</th>
+                        <td>{{ event.result }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="muted">No audit events for this merchant.</p>
+        {% endif %}
+
+        {% else %}
+        <div class="tab-intro">
+            <h2>Application overview</h2>
+            <p class="muted">Submitted onboarding evidence with risk scoring, data-match analysis, and full verification detail for review.</p>
+            {% if unmasked %}
+            <p class="review-hint">Full identifiers shown — access logged for audit.</p>
+            {% endif %}
+        </div>
+        {% include "portals/includes/review_scores.html" %}
+        {% include "portals/includes/review_match_table.html" %}
+        <dl class="review-grid mt-2">
+            <div class="review-row">
+                <dt>Owner</dt>
+                <dd>{{ merchant.owner.email }}</dd>
+            </div>
             {% if application %}
-            <p>Application {{ application.public_id }} is {{ application.get_status_display }}.</p>
+            <div class="review-row">
+                <dt>Application</dt>
+                <dd>
+                    <code>{{ application.public_id }}</code>
+                    <span class="badge {% if application.status == 'APPROVED' %}ok{% elif application.status == 'REJECTED' %}danger{% elif application.status == 'CLARIFICATION_REQUIRED' %}warn{% else %}info{% endif %}">{{ application.get_status_display }}</span>
+                </dd>
+            </div>
             {% endif %}
+        </dl>
 
-            {% if review.available %}
-            {% include "portals/includes/application_review.html" %}
-            {% else %}
-            <p class="muted">This merchant has not started an application yet.</p>
-            {% endif %}
+        {% if review.available %}
+        {% include "portals/includes/application_review.html" %}
+        {% else %}
+        <p class="muted">This merchant has not started an application yet.</p>
+        {% endif %}
 
-            <div class="action-row mt-3">
-                <form method="post" class="toolbar">
+        <section class="decision-panel">
+            <div class="card-head">
+                <h3>Reviewer actions</h3>
+            </div>
+
+            <form method="post" class="toolbar">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="assign">
+                <div class="field grow">
+                    <label for="assigned-to">Assigned reviewer</label>
+                    <select id="assigned-to" name="assigned_to">
+                        <option value="">Unassigned</option>
+                        {% for employee in employees %}
+                        <option value="{{ employee.pk }}" {% if merchant.assigned_to_id == employee.pk %}selected{% endif %}>{{ employee.email }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button class="secondary" type="submit">Assign</button>
+            </form>
+
+            {% if application %}
+            <div class="decision-split">
+                <form method="post" class="decision-branch"
+                      data-confirm-submit="Approve application {{ application.public_id }} for {{ merchant.business_name }}? This activates the merchant.">
                     {% csrf_token %}
-                    <input type="hidden" name="action" value="assign">
-                    <label class="field grow">Assigned reviewer
-                        <select name="assigned_to">
-                            <option value="">Unassigned</option>
-                            {% for employee in employees %}
-                            <option value="{{ employee.pk }}" {% if merchant.assigned_to_id == employee.pk %}selected{% endif %}>{{ employee.email }}</option>
+                    <input type="hidden" name="action" value="approve">
+                    <h4>Approve</h4>
+                    <p class="muted">Clears KYC, KYB and bank, and unlocks commerce for this merchant.</p>
+                    <button type="submit">Approve application</button>
+                </form>
+
+                <form method="post" class="decision-branch"
+                      data-confirm-submit="Reject application {{ application.public_id }}? The merchant is notified and must resubmit.">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="reject">
+                    <h4>Reject</h4>
+                    <div class="field">
+                        <label for="reject-reason">Reason</label>
+                        <select id="reject-reason" name="reason">
+                            <option>Business information mismatch</option>
+                            <option>Document unclear</option>
+                            <option>Bank verification failed</option>
+                            <option>Incomplete ownership information</option>
+                            <option>Agreement issue</option>
+                            <option>Risk review required</option>
+                            <option>Other</option>
+                        </select>
+                    </div>
+                    <button class="danger" type="submit">Reject application</button>
+                </form>
+
+                <form method="post" class="decision-branch">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="clarification">
+                    <h4>Send back for correction</h4>
+                    <div class="field">
+                        <label for="clarify-section">Section to reopen</label>
+                        <select id="clarify-section" name="step_key">
+                            {% for key, label in clarification_sections %}
+                            <option value="{{ key }}">{{ label }}</option>
                             {% endfor %}
                         </select>
-                    </label>
-                    <button class="secondary" type="submit">Assign</button>
+                    </div>
+                    <div class="field">
+                        <label for="clarify-message">What should the merchant fix?</label>
+                        <textarea id="clarify-message" name="message" rows="3" required></textarea>
+                    </div>
+                    <button class="secondary" type="submit">Request clarification</button>
                 </form>
+            </div>
+            {% endif %}
+
+            <div class="action-row danger-zone">
                 {% if merchant.status == "SUSPENDED" %}
-                <form method="post">
+                <p class="muted grow">This merchant is suspended and cannot transact.</p>
+                <form method="post" data-confirm-submit="Reactivate {{ merchant.business_name }}? They will be able to transact again.">
                     {% csrf_token %}
                     <input type="hidden" name="action" value="reactivate">
                     <button type="submit">Reactivate merchant</button>
                 </form>
                 {% else %}
-                <form method="post">
+                <p class="muted grow">Suspending blocks all new orders immediately.</p>
+                <form method="post" data-confirm-submit="Suspend {{ merchant.business_name }}? All new orders are blocked immediately.">
                     {% csrf_token %}
                     <input type="hidden" name="action" value="suspend">
                     <button class="danger" type="submit">Suspend merchant</button>
                 </form>
                 {% endif %}
             </div>
-            {% if application %}
-            <div class="review-actions mt-3">
-            <form method="post">
-                {% csrf_token %}
-                <input type="hidden" name="action" value="approve">
-                <button type="submit">Approve application</button>
-            </form>
-            <form method="post" class="reject-form">
-                {% csrf_token %}
-                <input type="hidden" name="action" value="reject">
-                <label class="field">Reason
-                    <select name="reason">
-                        <option>Business information mismatch</option>
-                        <option>Document unclear</option>
-                        <option>Bank verification failed</option>
-                        <option>Incomplete ownership information</option>
-                        <option>Agreement issue</option>
-                        <option>Risk review required</option>
-                        <option>Other</option>
-                    </select>
-                </label>
-                <button class="danger" type="submit">Reject</button>
-            </form>
-            </div>
-            <form method="post">
-                {% csrf_token %}
-                <input type="hidden" name="action" value="clarification">
-                <label class="field">Section
-                    <select name="step_key">
-                        {% for key, label in clarification_sections %}
-                        <option value="{{ key }}">{{ label }}</option>
-                        {% endfor %}
-                    </select>
-                </label>
-                <label class="field">Message
-                    <textarea name="message" required></textarea>
-                </label>
-                <button class="secondary" type="submit">Request clarification</button>
-            </form>
-            {% endif %}
+        </section>
         {% endif %}
     </section>
 </div>

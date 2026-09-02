@@ -1,5 +1,11 @@
 <div class="user-chip">
-    <button type="button" data-menu-target="user-menu" aria-expanded="false" aria-controls="user-menu">
+    {% comment %}
+    aria-label is needed because .user-meta is display:none below 900px, which
+    otherwise leaves this button with no accessible name at all (the avatar is
+    aria-hidden). The label stays correct at every width.
+    {% endcomment %}
+    <button type="button" data-menu-target="user-menu" aria-expanded="false" aria-controls="user-menu"
+            aria-label="Account menu for {{ request.user.display_name }}">
         <span class="avatar" aria-hidden="true">{{ request.user.initials }}</span>
         <span class="user-meta">
             <span class="user-name">{{ request.user.display_name }}</span>

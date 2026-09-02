@@ -1,37 +1,24 @@
 import { inject, Injectable, signal } from '@angular/core';
 import { Observable, tap, catchError, throwError } from 'rxjs';
-import { map, switchMap } from 'rxjs/operators';
+import { map } from 'rxjs/operators';
 import {
   CatalogItem,
-  FulfilmentFile,
   KycApplication,
-  Lead,
-  LeadStatus,
-  MailMessage,
   MerchantAgreement,
   OnboardingStep,
   OrderKind,
   PartnerOrder,
-  User,
 } from '../models/onboarding.models';
 import { ApiService } from './api.service';
-import { MockApiService, PartnerSummary } from './mock-api.service';
-import { OtpService } from './otp.service';
 
 @Injectable({ providedIn: 'root' })
 export class OnboardingService {
   private readonly api = inject(ApiService);
-  private readonly mock = inject(MockApiService);
-  private readonly otp = inject(OtpService);
 
   readonly application = signal<KycApplication | null>(null);
   readonly saving = signal(false);
   readonly orders = signal<PartnerOrder[]>([]);
   readonly catalog = signal<CatalogItem[]>([]);
-  readonly partners = signal<PartnerSummary[]>([]);
-  readonly mail = signal<MailMessage[]>([]);
-  readonly leads = signal<Lead[]>([]);
-  readonly team = signal<User[]>([]);
 
   load(): Observable<KycApplication> {
     return this.api.get<KycApplication>('/merchant/onboarding/').pipe(tap((app) => this.application.set(app)));
@@ -149,96 +136,4 @@ export class OnboardingService {
       );
   }
 
-  approveDemo(): Observable<KycApplication> {
-    return this.mock.approveDemo().pipe(tap((app) => this.application.set(app)));
-  }
-
-  loadPartners(): Observable<PartnerSummary[]> {
-    return this.mock.listPartners().pipe(tap((rows) => this.partners.set(rows)));
-  }
-
-  adminApproveKyc(userId: string): Observable<KycApplication> {
-    return this.mock.adminApproveKyc(userId).pipe(tap(() => this.loadPartners().subscribe()));
-  }
-
-  adminRejectKyc(userId: string, reason: string): Observable<KycApplication> {
-    return this.mock.adminRejectKyc(userId, reason).pipe(tap(() => this.loadPartners().subscribe()));
-  }
-
-  adminCountersign(userId: string, adminName: string): Observable<KycApplication> {
-    return this.mock.adminCountersign(userId, adminName).pipe(tap(() => this.loadPartners().subscribe()));
-  }
-
-  adminFulfillOrder(orderId: string): Observable<PartnerOrder> {
-    return this.adminSetOrderStatus(orderId, 'fulfilled');
-  }
-
-  adminSetOrderStatus(
-    orderId: string,
-    status: 'processing' | 'fulfilled' | 'cancelled',
-  ): Observable<PartnerOrder> {
-    return this.mock.adminSetOrderStatus(orderId, status).pipe(
-      tap((order) => this.orders.update((rows) => rows.map((r) => (r.id === order.id ? order : r)))),
-    );
-  }
-
-  fulfillWithFile(orderId: string, file: FulfilmentFile): Observable<PartnerOrder> {
-    return this.mock.adminFulfillWithFile(orderId, file).pipe(
-      tap((order) => this.orders.update((rows) => rows.map((r) => (r.id === order.id ? order : r)))),
-    );
-  }
-
-  requestFileOtp(orderId: string): Observable<{ sentTo: string }> {
-    return this.otp.sendSecurityOtp('email').pipe(
-      map(() => ({ sentTo: 'your registered email' })),
-    );
-  }
-
-  revealFilePassword(orderId: string, code: string): Observable<{ password: string; file: FulfilmentFile }> {
-    return this.otp.confirmSecurityOtp('email', code).pipe(
-      switchMap(() => this.mock.revealFilePassword(orderId, code)),
-    );
-  }
-
-  loadMail(): Observable<MailMessage[]> {
-    return this.mock.listMail().pipe(tap((rows) => this.mail.set(rows)));
-  }
-
-  loadTeam(): Observable<User[]> {
-    return this.mock.listTeam().pipe(tap((rows) => this.team.set(rows)));
-  }
-
-  createStaff(payload: { fullName: string; email: string; mobile: string }): Observable<User> {
-    return this.mock.createStaff(payload).pipe(tap((user) => this.team.update((rows) => [...rows, user])));
-  }
-
-  loadLeads(): Observable<Lead[]> {
-    return this.mock.listLeads().pipe(tap((rows) => this.leads.set(rows)));
-  }
-
-  getLead(leadId: string): Observable<Lead> {
-    return this.mock.getLead(leadId);
-  }
-
-  createLead(payload: {
-    company: string;
-    contactName: string;
-    email: string;
-    mobile: string;
-    source: string;
-    valueEstimate: number;
-    notes: string;
-    ownerId: string;
-  }): Observable<Lead> {
-    return this.mock.createLead(payload).pipe(tap((lead) => this.leads.update((rows) => [lead, ...rows])));
-  }
-
-  updateLead(
-    leadId: string,
-    patch: { status?: LeadStatus; notes?: string; ownerId?: string; activityText?: string },
-  ): Observable<Lead> {
-    return this.mock.updateLead(leadId, patch).pipe(
-      tap((lead) => this.leads.update((rows) => rows.map((r) => (r.id === lead.id ? lead : r)))),
-    );
-  }
 }

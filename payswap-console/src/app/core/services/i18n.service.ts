@@ -7,14 +7,12 @@ const DICT: Record<LocaleKey, Record<string, string>> = {
     signIn: 'Sign in',
     signOut: 'Sign out',
     orders: 'Orders',
-    leads: 'Leads',
     settings: 'Settings',
   },
   hi: {
     signIn: 'साइन इन',
     signOut: 'साइन आउट',
     orders: 'ऑर्डर्स',
-    leads: 'लीड्स',
     settings: 'सेटिंग्स',
   },
 };

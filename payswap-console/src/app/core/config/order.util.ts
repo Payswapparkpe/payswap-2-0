@@ -121,7 +121,7 @@ export function lockedFileText(order: PartnerOrder): string {
   ].join('\n');
 }
 
-export function downloadDataUrl(fileName: string, dataUrl: string): void {
+function downloadDataUrl(fileName: string, dataUrl: string): void {
   const a = document.createElement('a');
   a.href = dataUrl;
   a.download = fileName;

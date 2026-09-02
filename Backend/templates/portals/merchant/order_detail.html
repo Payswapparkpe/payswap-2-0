@@ -58,7 +58,7 @@
     {% endif %}
 
     {% if can_cancel %}
-    <form method="post" class="mt-4">
+    <form method="post" class="mt-4" data-confirm-submit="Cancel this order? This cannot be undone.">
         {% csrf_token %}
         <input type="hidden" name="action" value="cancel">
         <button type="submit" class="danger">Cancel order</button>

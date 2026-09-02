@@ -14,7 +14,7 @@
     <p class="muted">Each action is audited. Force logout ends the Django session, not only the tracking row.</p>
     {% if managed_users %}
     <div class="table-wrap"><table class="js-datatable display nowrap w-100" data-table-export="true">
-        <thead><tr><th>Email</th><th>Type</th><th>Active</th><th>MFA</th><th>Actions</th></tr></thead>
+        <thead><tr><th scope="col">Email</th><th scope="col">Type</th><th scope="col">Active</th><th scope="col">MFA</th><th scope="col">Actions</th></tr></thead>
         <tbody>
         {% for person in managed_users %}
         <tr>
@@ -25,10 +25,13 @@
             <td>
                 <form method="post" action="/administration/security/users/{{ person.pk }}/" class="action-row">
                     {% csrf_token %}
-                    <button type="submit" name="action" value="force_logout" class="secondary">Force logout</button>
-                    <button type="submit" name="action" value="reset_mfa" class="secondary">Reset MFA</button>
+                    <button type="submit" name="action" value="force_logout" class="secondary"
+                            data-confirm-submit="Force logout of every session for {{ person.email }}?">Force logout</button>
+                    <button type="submit" name="action" value="reset_mfa" class="secondary"
+                            data-confirm-submit="Reset MFA for {{ person.email }}? They must re-enrol before signing in.">Reset MFA</button>
                     {% if person.is_active %}
-                    <button type="submit" name="action" value="suspend" class="danger">Suspend</button>
+                    <button type="submit" name="action" value="suspend" class="danger"
+                            data-confirm-submit="Suspend {{ person.email }}? They lose access immediately.">Suspend</button>
                     {% endif %}
                 </form>
             </td>

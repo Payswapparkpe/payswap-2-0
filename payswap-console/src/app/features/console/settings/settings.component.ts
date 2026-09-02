@@ -4,7 +4,6 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
 import { AuthService } from '../../../core/services/auth.service';
-import { StorageService } from '../../../core/services/storage.service';
 import { Router } from '@angular/router';
 import { LocaleService } from '../../../core/services/locale.service';
 import { SUPPORTED_MARKETS } from '../../../core/config/market.config';
@@ -43,11 +42,6 @@ import { I18nService } from '../../../core/services/i18n.service';
         <code>{{ locale.market().timezone }}</code>
       </p>
     </article>
-    <article class="card">
-      <h3>Demo data</h3>
-      <p>Reset restores the seeded Acme Pvt Ltd draft and clears other accounts on this browser.</p>
-      <button mat-stroked-button color="warn" type="button" (click)="reset()">Reset local demo data</button>
-    </article>
   `,
   styles: [
     `
@@ -78,7 +72,6 @@ export class SettingsComponent {
   readonly auth = inject(AuthService);
   readonly locale = inject(LocaleService);
   readonly i18n = inject(I18nService);
-  private readonly storage = inject(StorageService);
   private readonly router = inject(Router);
   readonly marketOptions = [
     { code: 'in', label: 'India (INR, Asia/Kolkata)' },
@@ -88,11 +81,6 @@ export class SettingsComponent {
   marketCode: 'in' | 'us' = this.locale.market().currency === SUPPORTED_MARKETS['us'].currency ? 'us' : 'in';
 
   logout(): void {
-    this.auth.logout().subscribe(() => void this.router.navigate(['/login']));
-  }
-
-  reset(): void {
-    this.storage.reset();
     this.auth.logout().subscribe(() => void this.router.navigate(['/login']));
   }
 

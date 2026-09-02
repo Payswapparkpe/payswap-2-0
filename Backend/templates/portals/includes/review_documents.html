@@ -1,0 +1,91 @@
+{% comment %}
+Uploaded files for a merchant application. Expects document_cards from documents_for_review().
+Administration reviewers can approve/reject when document_actions=True and download_prefix is set.
+{% endcomment %}
+{% if document_cards %}
+<div class="doc-grid">
+    {% for card in document_cards %}
+    {% with document=card.document %}
+    <article class="doc-card doc-card--{{ card.file_kind }}">
+        <div class="doc-card-media">
+            {% if card.preview_url %}
+            <a href="{{ card.preview_url }}" target="_blank" rel="noopener noreferrer">
+                <img src="{{ card.preview_url }}" alt="Preview of {{ document.get_doc_type_display }}" class="doc-thumb" loading="lazy">
+            </a>
+            {% elif card.file_kind == "pdf" %}
+            <div class="doc-thumb doc-thumb--pdf" aria-hidden="true">PDF</div>
+            {% else %}
+            <div class="doc-thumb doc-thumb--file" aria-hidden="true">{{ card.file_kind|upper|slice:":3" }}</div>
+            {% endif %}
+        </div>
+        <div class="doc-card-body">
+            <div class="doc-row-head">
+                <div class="doc-row-title">
+                    <h3>{{ document.get_doc_type_display }}</h3>
+                    <p class="muted">
+                        <code>{{ document.public_id }}</code>
+                        {% if document.slot_id %}· slot <code>{{ document.slot_id }}</code>{% endif %}
+                        {% if card.file_name %}· {{ card.file_name }}{% endif %}
+                        {% if card.file_size %}· {{ card.file_size }}{% endif %}
+                        {% if document.version > 1 %}· v{{ document.version }}{% endif %}
+                    </p>
+                    <p class="muted doc-meta">
+                        Uploaded {{ document.created_at|date:"j M Y, H:i" }}
+                        {% if document.uploaded_by %}· {{ document.uploaded_by.email }}{% endif %}
+                        {% if document.reviewed_by %}· reviewed by {{ document.reviewed_by.email }}{% endif %}
+                    </p>
+                </div>
+                <span class="badge {% if document.status == 'VERIFIED' %}ok{% elif document.status == 'REJECTED' %}danger{% elif document.status == 'ACTION_REQUIRED' %}warn{% else %}neutral{% endif %}">{{ document.get_status_display }}</span>
+            </div>
+            {% if document.rejection_reason %}
+            <p class="doc-row-note">{{ document.rejection_reason }}</p>
+            {% endif %}
+            <div class="action-row">
+                {% if document.file and download_prefix %}
+                <form method="post" action="{{ download_prefix }}{{ document.public_id }}/download/">
+                    {% csrf_token %}
+                    <button class="secondary" type="submit">Download</button>
+                </form>
+                {% elif not document.file %}
+                <p class="muted">No file stored for this record.</p>
+                {% endif %}
+                {% if document_actions and document.status != "VERIFIED" and document.status != "REJECTED" %}
+                <form method="post" action="/administration/documents/{{ document.public_id }}/"
+                      data-confirm-submit="Approve {{ document.get_doc_type_display }} ({{ document.public_id }})?">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="approve">
+                    <button type="submit">Approve</button>
+                </form>
+                {% endif %}
+            </div>
+            {% if document_actions and document.status != "VERIFIED" and document.status != "REJECTED" %}
+            <div class="action-row">
+                <form method="post" action="/administration/documents/{{ document.public_id }}/" class="reject-form"
+                      data-confirm-submit="Reject {{ document.public_id }}? The merchant is notified and must re-upload.">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="reject">
+                    <div class="field">
+                        <label for="reject-{{ document.public_id }}">Rejection reason</label>
+                        <input id="reject-{{ document.public_id }}" name="reason" required placeholder="Why is this rejected?">
+                    </div>
+                    <button class="danger" type="submit">Reject</button>
+                </form>
+                <form method="post" action="/administration/documents/{{ document.public_id }}/" class="reject-form">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="request_replacement">
+                    <div class="field">
+                        <label for="replace-{{ document.public_id }}">Ask for a replacement</label>
+                        <input id="replace-{{ document.public_id }}" name="reason" required placeholder="What should the merchant re-upload?">
+                    </div>
+                    <button class="secondary" type="submit">Request replacement</button>
+                </form>
+            </div>
+            {% endif %}
+        </div>
+    </article>
+    {% endwith %}
+    {% endfor %}
+</div>
+{% else %}
+<p class="muted">No documents uploaded.</p>
+{% endif %}

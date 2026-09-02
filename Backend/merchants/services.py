@@ -376,6 +376,9 @@ class MerchantOnboardingService:
         application.save(update_fields=["status", "submitted_at"])
         application.merchant.status = Merchant.Status.PENDING_REVIEW
         application.merchant.save(update_fields=["status"])
+        from merchants.scoring import update_merchant_risk_status
+
+        update_merchant_risk_status(application.merchant, application=application)
         AuditService.record(
             actor=actor,
             action="onboarding.submit",

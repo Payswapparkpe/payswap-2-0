@@ -350,7 +350,9 @@ def onboarding_payload(*, user: User, application: OnboardingApplication | None,
                     "pan": director.get("pan") or "",
                     "ownershipPercent": 0,
                     "relationship": director.get("designation") or "Director",
-                    "kycVerified": False,
+                    "kycVerified": bool(
+                        director.get("kycVerified") or director.get("kyc_verified")
+                    ),
                 }
             )
     return_reason = ""

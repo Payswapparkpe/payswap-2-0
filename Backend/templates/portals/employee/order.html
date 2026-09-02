@@ -25,7 +25,8 @@
         <form method="post">{% csrf_token %}<input type="hidden" name="action" value="review"><button class="secondary" type="submit">Start review</button></form>
         {% endif %}
         {% if can_approve %}
-        <form method="post">{% csrf_token %}<input type="hidden" name="action" value="approve"><button type="submit">Approve order</button></form>
+        <form method="post" data-confirm-submit="Approve {{ order.public_id }}? The merchant is notified and the order is committed.">
+            {% csrf_token %}<input type="hidden" name="action" value="approve"><button type="submit">Approve order</button></form>
         {% endif %}
     </div>
 
@@ -42,7 +43,8 @@
                 <button type="submit" name="action" value="request_changes" class="secondary">Request changes</button>
                 {% endif %}
                 {% if can_reject %}
-                <button type="submit" name="action" value="reject" class="danger">Reject order</button>
+                <button type="submit" name="action" value="reject" class="danger"
+                        data-confirm-submit="Reject {{ order.public_id }}? The merchant is notified with your reason.">Reject order</button>
                 {% endif %}
             </div>
         </form>

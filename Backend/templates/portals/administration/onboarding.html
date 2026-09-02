@@ -1,17 +1,19 @@
 {% extends "layouts/administration.html" %}
 {% block heading %}Onboarding{% endblock %}
+{% block subhead %}Applications awaiting review — open a merchant to inspect documents and API responses{% endblock %}
 {% block content %}
 {% if applications %}
 <div class="card table-wrap">
 <table>
-    <thead><tr><th>Application ID</th><th>Merchant</th><th>Status</th><th>Submitted</th></tr></thead>
+    <thead><tr><th scope="col">Application ID</th><th scope="col">Merchant</th><th scope="col">Entity</th><th scope="col">Status</th><th scope="col">Submitted</th></tr></thead>
     <tbody>
     {% for application in applications %}
     <tr>
-        <td><a href="/administration/merchants/{{ application.merchant.public_id }}/">{{ application.public_id }}</a></td>
-        <td>{{ application.merchant.business_name }}</td>
-        <td>{{ application.get_status_display }}</td>
-        <td>{{ application.submitted_at|default:"—" }}</td>
+        <td><a href="/administration/merchants/{{ application.merchant.public_id }}/"><code>{{ application.public_id }}</code></a></td>
+        <td><strong>{{ application.merchant.business_name }}</strong></td>
+        <td>{{ application.merchant.get_entity_type_display }}</td>
+        <td><span class="badge {% if application.status == 'APPROVED' or application.status == 'COMPLETE' %}ok{% elif application.status == 'REJECTED' %}danger{% elif application.status == 'CLARIFICATION_REQUIRED' %}warn{% else %}neutral{% endif %}">{{ application.get_status_display }}</span></td>
+        <td class="nowrap">{{ application.submitted_at|date:"j M Y, H:i"|default:"—" }}</td>
     </tr>
     {% endfor %}
     </tbody>

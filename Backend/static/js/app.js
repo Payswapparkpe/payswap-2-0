@@ -540,7 +540,12 @@
     doc.addEventListener("submit", function (event) {
         var form = event.target;
         if (!(form instanceof HTMLFormElement)) return;
-        var message = form.getAttribute("data-confirm-submit");
+        // A message on the clicked button wins over one on the form, so a form
+        // carrying several actions can confirm only the destructive ones.
+        var submitter = event.submitter;
+        var message =
+            (submitter && submitter.getAttribute("data-confirm-submit")) ||
+            form.getAttribute("data-confirm-submit");
         if (!message) return;
         if (!window.confirm(message)) {
             event.preventDefault();

@@ -14,36 +14,105 @@
         <span class="badge {% if application.status == 'SUBMITTED' or application.status == 'UNDER_REVIEW' %}warn{% elif application.status == 'APPROVED' or application.status == 'COMPLETE' %}ok{% elif application.status == 'REJECTED' %}danger{% else %}info{% endif %}">{{ application.get_status_display }}</span>
     </div>
     <p class="muted">{{ merchant.public_id }} · {{ merchant.get_entity_type_display }}</p>
-    {% for step in application.steps.all %}
-    <div class="step">
-        <span>{{ step.title }}</span>
-        <span class="badge {% if step.status == 'COMPLETE' %}ok{% else %}neutral{% endif %}">{{ step.get_status_display }}</span>
+
+    {% if unmasked %}
+    <p class="review-hint">Full identifiers shown — access logged for audit.</p>
+    {% endif %}
+    {% include "portals/includes/review_scores.html" %}
+    {% include "portals/includes/review_match_table.html" %}
+
+    <div class="review-section">
+        <div class="review-section-head">
+            <h3>Wizard progress</h3>
+        </div>
+        {% for step in application.steps.all %}
+        <div class="step">
+            <span>{{ step.title }}</span>
+            <span class="badge {% if step.status == 'COMPLETE' %}ok{% elif step.status == 'NEEDS_CORRECTION' %}danger{% else %}neutral{% endif %}">{{ step.get_status_display }}</span>
+        </div>
+        {% if step.clarification_message %}
+        <p class="doc-row-note">{{ step.clarification_message }}</p>
+        {% endif %}
+        {% empty %}
+        <p class="muted">No wizard steps recorded.</p>
+        {% endfor %}
     </div>
-    {% endfor %}
-    <div class="review-actions">
-        <form method="post">{% csrf_token %}<input type="hidden" name="action" value="approve"><button type="submit">Approve</button></form>
-        <form method="post" class="reject-form">{% csrf_token %}<input type="hidden" name="action" value="reject">
-            <label class="field">Reason
-                <select name="reason" aria-label="Rejection reason">
-                    <option>Business information mismatch</option>
-                    <option>Document unclear</option>
-                    <option>Bank verification failed</option>
-                    <option>Other</option>
-                </select>
-            </label>
-            <button class="danger" type="submit">Reject</button>
-        </form>
+
+    {% if review.available %}
+    {% include "portals/includes/application_review.html" %}
+    {% else %}
+    <p class="muted">This merchant has not started an application yet.</p>
+    {% endif %}
+
+    <div class="review-section">
+        <div class="review-section-head">
+            <h3>Documents</h3>
+            {% if document_cards %}<span class="review-count">{{ document_cards|length }}</span>{% endif %}
+        </div>
+        {% include "portals/includes/review_documents.html" with document_cards=document_cards download_prefix="/employee/documents/" document_actions=False %}
     </div>
-    <form method="post" class="mt-4">
-        {% csrf_token %}
-        <input type="hidden" name="action" value="clarification">
-        <label class="field">Section
-            <select name="step_key" aria-label="Clarification section"><option value="bank">Bank</option><option value="kyc">KYC</option></select>
-        </label>
-        <label class="field">Message
-            <textarea name="message" required placeholder="Enter message"></textarea>
-        </label>
-        <button class="secondary" type="submit">Request clarification</button>
-    </form>
+
+    <div class="review-section">
+        <div class="review-section-head">
+            <h3>Verification checks</h3>
+            {% if verification_cards %}<span class="review-count">{{ verification_cards|length }}</span>{% endif %}
+        </div>
+        {% include "portals/includes/review_verifications.html" with verification_cards=verification_cards %}
+    </div>
+
+    <section class="decision-panel">
+        <div class="card-head">
+            <h3>Reviewer actions</h3>
+        </div>
+        <div class="decision-split">
+            <form method="post" class="decision-branch"
+                  data-confirm-submit="Approve application {{ application.public_id }} for {{ merchant.business_name }}?">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="approve">
+                <h4>Approve</h4>
+                <p class="muted">Clears this application and moves the merchant forward.</p>
+                <button type="submit">Approve</button>
+            </form>
+
+            <form method="post" class="decision-branch"
+                  data-confirm-submit="Reject application {{ application.public_id }}? The merchant is notified and must resubmit.">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="reject">
+                <h4>Reject</h4>
+                <div class="field">
+                    <label for="employee-reject-reason">Reason</label>
+                    <select id="employee-reject-reason" name="reason">
+                        <option>Business information mismatch</option>
+                        <option>Document unclear</option>
+                        <option>Bank verification failed</option>
+                        <option>Incomplete ownership information</option>
+                        <option>Agreement issue</option>
+                        <option>Risk review required</option>
+                        <option>Other</option>
+                    </select>
+                </div>
+                <button class="danger" type="submit">Reject</button>
+            </form>
+
+            <form method="post" class="decision-branch">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="clarification">
+                <h4>Send back for correction</h4>
+                <div class="field">
+                    <label for="employee-clarify-section">Section to reopen</label>
+                    <select id="employee-clarify-section" name="step_key">
+                        {% for key, label in clarification_sections %}
+                        <option value="{{ key }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="field">
+                    <label for="employee-clarify-message">What should the merchant fix?</label>
+                    <textarea id="employee-clarify-message" name="message" rows="3" required></textarea>
+                </div>
+                <button class="secondary" type="submit">Request clarification</button>
+            </form>
+        </div>
+    </section>
 </section>
 {% endblock %}

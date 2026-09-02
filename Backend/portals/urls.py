@@ -92,6 +92,7 @@ employee_patterns = [
     path("orders/", EmployeeOrderListView.as_view(), name="orders"),
     path("orders/<str:public_id>/", EmployeeOrderView.as_view(), name="order"),
     path("orders/<str:public_id>/document/", OrderDocumentView.as_view(), name="order_document"),
+    path("documents/<str:public_id>/download/", DocumentDownloadView.as_view(), name="document_download"),
     path("profile/", AccountProfileView.as_view(), name="profile"),
     path("notifications/", NotificationListView.as_view(), name="notifications"),
     path("search/", SearchView.as_view(), name="search"),

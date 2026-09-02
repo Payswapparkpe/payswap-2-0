@@ -1,0 +1,25 @@
+{% comment %}KYC/KYB risk score cards for staff review. Expects scores from compute_review_scores().{% endcomment %}
+{% if scores %}
+<section class="review-scores" aria-label="Risk scores">
+    <article class="score-card score-card--kyc">
+        <p class="score-card-label">KYC score</p>
+        <p class="score-card-value">{{ scores.kyc.score }}<span class="score-card-suffix">/100</span></p>
+        <span class="badge {% if scores.kyc.band == 'Low' %}ok{% elif scores.kyc.band == 'Medium' %}warn{% else %}danger{% endif %}">{{ scores.kyc.band }} risk</span>
+        <p class="muted score-card-meta">{{ scores.kyc.matched }} matched{% if scores.kyc.partial %}, {{ scores.kyc.partial }} partial{% endif %}{% if scores.kyc.mismatches %}, {{ scores.kyc.mismatches }} mismatch{% endif %}</p>
+    </article>
+    <article class="score-card score-card--kyb">
+        <p class="score-card-label">KYB score</p>
+        <p class="score-card-value">{{ scores.kyb.score }}<span class="score-card-suffix">/100</span></p>
+        <span class="badge {% if scores.kyb.band == 'Low' %}ok{% elif scores.kyb.band == 'Medium' %}warn{% else %}danger{% endif %}">{{ scores.kyb.band }} risk</span>
+        <p class="muted score-card-meta">{{ scores.kyb.matched }} matched{% if scores.kyb.partial %}, {{ scores.kyb.partial }} partial{% endif %}{% if scores.kyb.mismatches %}, {{ scores.kyb.mismatches }} mismatch{% endif %}</p>
+    </article>
+    <article class="score-card score-card--overall">
+        <p class="score-card-label">Overall</p>
+        <p class="score-card-value">{{ scores.overall_score }}<span class="score-card-suffix">/100</span></p>
+        <span class="badge {% if scores.overall_band == 'Low' %}ok{% elif scores.overall_band == 'Medium' %}warn{% else %}danger{% endif %}">{{ scores.overall_band }}</span>
+        {% if scores.mismatch_count %}
+        <p class="score-card-alert">{{ scores.mismatch_count }} field{{ scores.mismatch_count|pluralize }} need attention</p>
+        {% endif %}
+    </article>
+</section>
+{% endif %}

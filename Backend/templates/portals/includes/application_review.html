@@ -1,62 +1,83 @@
 {% comment %}
 Submitted application data for a reviewer. Shared by the administration merchant
 detail page and the employee KYC queue so both portals show the same evidence.
-Values are already masked by display_step_data — never render raw step data here.
+Values are masked unless review.unmasked is true.
 {% endcomment %}
 <div class="review-data">
     {% for section in review.sections %}
-    <section class="review-section">
-        <h3>{{ section.title }}</h3>
+    <section class="review-section" aria-labelledby="review-{{ section.id }}">
+        <div class="review-section-head">
+            <h3 id="review-{{ section.id }}">{{ section.title }}</h3>
+            <span class="review-count is-{{ section.state }}">{{ section.filled }}/{{ section.total }} provided</span>
+        </div>
         <dl class="review-grid">
             {% for row in section.rows %}
             <div class="review-row{% if row.missing %} is-missing{% endif %}">
                 <dt>{{ row.label }}</dt>
-                <dd>{{ row.value }}{% if row.hint %} <span class="muted">({{ row.hint }})</span>{% endif %}</dd>
+                <dd>
+                    {{ row.value }}
+                    {% if row.hint %}<span class="review-hint">{{ row.hint }}</span>{% endif %}
+                </dd>
             </div>
             {% endfor %}
         </dl>
     </section>
     {% endfor %}
 
-    <section class="review-section">
-        <h3>People</h3>
-        <p class="muted">
-            Account opener is the owner:
-            <strong>{% if review.signatory_is_owner == True %}Yes{% elif review.signatory_is_owner == False %}No{% else %}Not answered{% endif %}</strong>
-            · Account opener is the authorised signatory:
-            <strong>{% if review.kyc_person_is_authorised_signatory == True %}Yes{% elif review.kyc_person_is_authorised_signatory == False %}No{% else %}Not answered{% endif %}</strong>
-            {% if review.signatory_relation %} · Relation: <strong>{{ review.signatory_relation }}</strong>{% endif %}
-        </p>
-        {% for person in review.people %}
-        <div class="step">
-            <span>{{ person.role }} — <strong>{{ person.name }}</strong></span>
-            <span class="badge {% if person.verified %}ok{% else %}neutral{% endif %}">{% if person.verified %}KYC verified{% else %}KYC pending{% endif %}</span>
+    <section class="review-section" aria-labelledby="review-people">
+        <div class="review-section-head">
+            <h3 id="review-people">People</h3>
+            <span class="review-count">{{ review.people|length }} on file</span>
         </div>
-        <dl class="review-grid">
-            {% for row in person.rows %}
-            <div class="review-row{% if row.missing %} is-missing{% endif %}">
-                <dt>{{ row.label }}</dt>
-                <dd>{{ row.value }}</dd>
+
+        <ul class="review-answers">
+            <li>
+                <span>Account opener is the owner</span>
+                <strong>{% if review.signatory_is_owner == True %}Yes{% elif review.signatory_is_owner == False %}No{% else %}Not answered{% endif %}</strong>
+            </li>
+            <li>
+                <span>Account opener is the authorised signatory</span>
+                <strong>{% if review.kyc_person_is_authorised_signatory == True %}Yes{% elif review.kyc_person_is_authorised_signatory == False %}No{% else %}Not answered{% endif %}</strong>
+            </li>
+            {% if review.signatory_relation %}
+            <li>
+                <span>Relation to the business</span>
+                <strong>{{ review.signatory_relation }}</strong>
+            </li>
+            {% endif %}
+        </ul>
+
+        {% for person in review.people %}
+        <article class="person-card">
+            <div class="person-card-head">
+                <div>
+                    <p class="person-role">{{ person.role }}</p>
+                    <h4>{{ person.name }}</h4>
+                </div>
+                <span class="badge {% if person.verified %}ok{% else %}neutral{% endif %}">{% if person.verified %}KYC verified{% else %}KYC pending{% endif %}</span>
             </div>
-            {% endfor %}
-        </dl>
+            <dl class="review-grid">
+                {% for row in person.rows %}
+                <div class="review-row{% if row.missing %} is-missing{% endif %}">
+                    <dt>{{ row.label }}</dt>
+                    <dd>{{ row.value }}</dd>
+                </div>
+                {% endfor %}
+            </dl>
+        </article>
         {% empty %}
         <p class="muted">No person KYC captured yet.</p>
         {% endfor %}
     </section>
 
-    <section class="review-section">
-        <h3>Directors (registry)</h3>
-        {% include "portals/includes/review_party_table.html" with party=review.directors %}
+    {% for party in review.parties %}
+    <section class="review-section" aria-labelledby="review-{{ party.id }}">
+        <div class="review-section-head">
+            <h3 id="review-{{ party.id }}">{{ party.title }}</h3>
+            {% if party.rows %}<span class="review-count">{{ party.rows|length }}</span>{% endif %}
+        </div>
+        {% include "portals/includes/review_party_table.html" with party=party %}
     </section>
+    {% endfor %}
 
-    <section class="review-section">
-        <h3>Partners / trustees</h3>
-        {% include "portals/includes/review_party_table.html" with party=review.members %}
-    </section>
-
-    <section class="review-section">
-        <h3>Beneficial owners</h3>
-        {% include "portals/includes/review_party_table.html" with party=review.ubos %}
-    </section>
 </div>

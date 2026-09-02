@@ -1,0 +1,49 @@
+{% if scores.match_rows %}
+<section class="review-section review-match-panel" aria-labelledby="review-match-heading">
+    <div class="review-section-head">
+        <h3 id="review-match-heading">Data match analysis</h3>
+        {% if scores.mismatch_count %}
+        <span class="review-count is-partial">{{ scores.mismatch_count }} mismatch{{ scores.mismatch_count|pluralize:"es" }}</span>
+        {% else %}
+        <span class="review-count is-full">All checks aligned</span>
+        {% endif %}
+    </div>
+    <div class="table-wrap">
+        <table class="match-table">
+            <caption class="sr-only">Comparison of merchant-entered data against registry and API verification results</caption>
+            <thead>
+                <tr>
+                    <th scope="col">Check</th>
+                    <th scope="col">Field</th>
+                    <th scope="col">Merchant entered</th>
+                    <th scope="col">Registry / API</th>
+                    <th scope="col">Match</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in scores.match_rows %}
+                <tr class="match-row match-row--{{ row.status }}">
+                    <td>{{ row.check }}</td>
+                    <td>{{ row.field }}</td>
+                    <td>{{ row.entered }}</td>
+                    <td>{{ row.registry }}</td>
+                    <td>
+                        <span class="badge {% if row.status == 'match' %}ok{% elif row.status == 'partial' %}warn{% elif row.status == 'mismatch' %}danger{% else %}neutral{% endif %}">
+                            {% if row.status == 'match' %}Match{% elif row.status == 'partial' %}Partial{% elif row.status == 'mismatch' %}Mismatch{% else %}Unverified{% endif %}
+                            {% if row.score %} · {{ row.score }}%{% endif %}
+                        </span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% elif scores %}
+<section class="review-section review-match-panel" aria-labelledby="review-match-heading">
+    <div class="review-section-head">
+        <h3 id="review-match-heading">Data match analysis</h3>
+    </div>
+    <p class="muted">No verified API checks yet. Match analysis appears once PAN, GSTIN, bank, or DigiLocker verifications complete.</p>
+</section>
+{% endif %}

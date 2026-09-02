@@ -3,7 +3,7 @@
 {% block content %}
 {% if employees %}
 <div class="card table-wrap"><table>
-<thead><tr><th>Email</th><th>Department</th><th>Roles</th><th>Active</th><th>Actions</th></tr></thead>
+<thead><tr><th scope="col">Email</th><th scope="col">Department</th><th scope="col">Roles</th><th scope="col">Active</th><th scope="col">Actions</th></tr></thead>
 <tbody>
 {% for employee in employees %}
 <tr>
@@ -18,10 +18,13 @@
     <td>
         <form method="post" action="/administration/security/users/{{ employee.pk }}/" class="action-row">
             {% csrf_token %}
-            <button type="submit" name="action" value="force_logout" class="secondary">Force logout</button>
-            <button type="submit" name="action" value="reset_mfa" class="secondary">Reset MFA</button>
+            <button type="submit" name="action" value="force_logout" class="secondary"
+                    data-confirm-submit="Force logout of every session for {{ employee.email }}?">Force logout</button>
+            <button type="submit" name="action" value="reset_mfa" class="secondary"
+                    data-confirm-submit="Reset MFA for {{ employee.email }}? They must re-enrol before signing in.">Reset MFA</button>
             {% if employee.is_active %}
-            <button type="submit" name="action" value="suspend" class="danger">Suspend</button>
+            <button type="submit" name="action" value="suspend" class="danger"
+                    data-confirm-submit="Suspend {{ employee.email }}? They lose access immediately.">Suspend</button>
             {% endif %}
         </form>
         <form method="post" action="/administration/employees/{{ employee.pk }}/role/" class="action-row mt-2">
@@ -33,7 +36,8 @@
                 {% endfor %}
             </select>
             <button type="submit" name="action" value="grant" class="secondary">Grant</button>
-            <button type="submit" name="action" value="revoke" class="secondary">Revoke</button>
+            <button type="submit" name="action" value="revoke" class="secondary"
+                    data-confirm-submit="Revoke this role from {{ employee.email }}?">Revoke</button>
         </form>
     </td>
 </tr>

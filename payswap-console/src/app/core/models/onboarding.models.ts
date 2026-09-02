@@ -286,42 +286,6 @@ export interface PartnerOrder {
   filePassword?: string;
 }
 
-export interface MailMessage {
-  id: string;
-  to: string;
-  subject: string;
-  body: string;
-  orderId: string;
-  createdAt: string;
-  attachmentName?: string;
-}
-
-export type LeadStatus = 'new' | 'contacted' | 'qualified' | 'kyc' | 'commercial' | 'won' | 'lost';
-
-export interface LeadActivity {
-  at: string;
-  userId: string;
-  text: string;
-  status?: LeadStatus;
-}
-
-export interface Lead {
-  id: string;
-  company: string;
-  contactName: string;
-  email: string;
-  mobile: string;
-  source: string;
-  valueEstimate: number;
-  notes: string;
-  status: LeadStatus;
-  ownerId: string;
-  partnerUserId?: string;
-  createdAt: string;
-  updatedAt: string;
-  activity: LeadActivity[];
-}
-
 export interface KycApplication {
   userId: string;
   /** Merchant file ID, e.g. PSM-000003 */
@@ -362,21 +326,6 @@ export interface KycApplication {
   submittedAt?: string;
   kybApprovedAt?: string;
   activatedAt?: string;
-}
-
-export interface Session {
-  token: string;
-  userId: string;
-}
-
-export interface AppDatabase {
-  users: User[];
-  sessions: Session[];
-  applications: Record<string, KycApplication>;
-  orders: PartnerOrder[];
-  mail: MailMessage[];
-  leads: Lead[];
-  currentToken: string | null;
 }
 
 export const ONBOARDING_STEPS: { id: OnboardingStep; label: string }[] = [
@@ -559,26 +508,6 @@ export function partnerSigned(app: KycApplication | null | undefined): boolean {
 export const PARTNER_TYPE_LABELS: Record<Exclude<PartnerType, 'admin'>, string> = {
   corporate: 'Corporate',
   staff: 'Payswap staff',
-};
-
-export const LEAD_STATUSES: LeadStatus[] = [
-  'new',
-  'contacted',
-  'qualified',
-  'kyc',
-  'commercial',
-  'won',
-  'lost',
-];
-
-export const LEAD_STATUS_LABELS: Record<LeadStatus, string> = {
-  new: 'New',
-  contacted: 'Contacted',
-  qualified: 'Qualified',
-  kyc: 'KYC',
-  commercial: 'Commercial',
-  won: 'Won',
-  lost: 'Lost',
 };
 
 export function panEntityHint(pan: string): EntityType | null {

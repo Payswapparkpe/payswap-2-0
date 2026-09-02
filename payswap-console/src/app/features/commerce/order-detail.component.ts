@@ -1,11 +1,9 @@
 import { CurrencyPipe, DatePipe, TitleCasePipe } from '@angular/common';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
-import { FormControl, ReactiveFormsModule } from '@angular/forms';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
-import { FulfilmentFile, PartnerOrder } from '../../core/models/onboarding.models';
+import { PartnerOrder } from '../../core/models/onboarding.models';
 import {
-  downloadDataUrl,
   downloadText,
   invoiceHtml,
   kindLabel,
@@ -14,16 +12,14 @@ import {
 } from '../../core/config/order.util';
 import { OnboardingService } from '../../core/services/onboarding.service';
 import { AuthService } from '../../core/services/auth.service';
-import { OtpService } from '../../core/services/otp.service';
-import { OtpInputComponent } from '../../shared/ui/otp-input/otp-input.component';
 
 @Component({
   selector: 'app-order-detail',
   standalone: true,
-  imports: [CurrencyPipe, DatePipe, TitleCasePipe, RouterLink, MatButtonModule, ReactiveFormsModule, OtpInputComponent],
+  imports: [CurrencyPipe, DatePipe, TitleCasePipe, RouterLink, MatButtonModule],
   template: `
     <p class="back">
-      <a [routerLink]="isAdmin() ? '/admin/orders' : '/app/orders'">← All orders</a>
+      <a routerLink="/app/orders">← All orders</a>
     </p>
     @if (error()) {
       <p class="error">{{ error() }}</p>
@@ -66,26 +62,13 @@ import { OtpInputComponent } from '../../shared/ui/otp-input/otp-input.component
             @if (row.status === 'fulfilled' && row.fulfilmentCodes.length) {
               <button mat-stroked-button type="button" (click)="downloadCodes(row)">Download codes</button>
             }
-            @if (!isAdmin() && row.status === 'placed') {
+            @if (row.status === 'placed') {
               <button mat-stroked-button color="warn" type="button" [disabled]="busy()" (click)="cancel()">
                 Cancel order
               </button>
             }
-            @if (!isAdmin() && row.kind !== 'corporate_gifting') {
+            @if (row.kind !== 'corporate_gifting') {
               <a mat-stroked-button [routerLink]="againLink(row)">Order again</a>
-            }
-            @if (isAdmin() && row.status === 'placed') {
-              <button mat-flat-button color="primary" type="button" [disabled]="busy()" (click)="setStatus('processing')">
-                Mark processing
-              </button>
-            }
-            @if (isAdmin() && (row.status === 'placed' || row.status === 'processing')) {
-              <button mat-stroked-button color="warn" type="button" [disabled]="busy()" (click)="setStatus('cancelled')">
-                Cancel
-              </button>
-              <button mat-stroked-button type="button" [disabled]="busy()" (click)="setStatus('fulfilled')">
-                Fulfil without file
-              </button>
             }
           </div>
         </section>
@@ -118,43 +101,16 @@ import { OtpInputComponent } from '../../shared/ui/otp-input/otp-input.component
 
       <section>
         <h3>Fulfilment file</h3>
-        @if (isAdmin() && (row.status === 'placed' || row.status === 'processing')) {
-          <p class="hint">Upload the brand voucher / card file. Payswap generates a password, mails a locked copy, and partners reveal it after email OTP verification.</p>
-          <input type="file" (change)="onFile($event)" />
-          @if (pendingFileName()) {
-            <p>Selected: {{ pendingFileName() }}</p>
-          }
-          <button mat-flat-button color="primary" type="button" [disabled]="busy() || !pendingFile()" (click)="uploadFile()">
-            {{ busy() ? 'Sending…' : 'Mail protected file and fulfil' }}
-          </button>
-        }
         @if (row.fulfilmentFile) {
           <p>Attachment: <strong>{{ row.fulfilmentFile.fileName }}</strong></p>
           <button mat-stroked-button type="button" (click)="downloadLocked(row)">Download locked copy</button>
-        }
-        @if (isAdmin() && row.filePassword) {
-          <p class="pwd">File password: <code>{{ row.filePassword }}</code></p>
-        }
-        @if (!isAdmin() && row.fulfilmentFile) {
-          @if (!revealed()) {
-            <p class="hint">
-              Request an OTP on {{ auth.user()?.email }}. Mobile OTP for other flows uses Kaleyra SMS ({{ otp.config().smsSender }}).
-            </p>
-            <button mat-stroked-button type="button" [disabled]="busy()" (click)="sendOtp()">Send OTP</button>
-            @if (otpSent()) {
-              <p class="label">OTP</p>
-              <app-otp-input [formControl]="otpCtrl" />
-              <button mat-flat-button color="primary" type="button" [disabled]="busy()" (click)="reveal()">
-                Reveal password
-              </button>
-            }
-          } @else {
-            <p class="pwd">File password: <code>{{ revealedPassword() }}</code></p>
-            <button mat-flat-button color="primary" type="button" (click)="downloadReal()">Download real file</button>
-          }
-        }
-        @if (row.status === 'fulfilled' && row.fulfilmentCodes.length && !row.fulfilmentFile) {
+          <p class="hint">
+            The password for this file is emailed to {{ auth.user()?.email }} when Payswap fulfils the order.
+          </p>
+        } @else if (row.status === 'fulfilled' && row.fulfilmentCodes.length) {
           <p class="hint">No file was attached. Sample codes are below.</p>
+        } @else {
+          <p class="hint">Nothing attached yet. Payswap uploads the brand file when the order is fulfilled.</p>
         }
       </section>
     } @else if (!error()) {
@@ -292,26 +248,17 @@ import { OtpInputComponent } from '../../shared/ui/otp-input/otp-input.component
 })
 export class OrderDetailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
-  private readonly router = inject(Router);
   private readonly onboarding = inject(OnboardingService);
   readonly auth = inject(AuthService);
-  readonly otp = inject(OtpService);
 
   readonly order = signal<PartnerOrder | null>(null);
   readonly error = signal('');
   readonly busy = signal(false);
-  readonly isAdmin = computed(() => this.router.url.startsWith('/admin'));
   readonly steps = computed(() => {
     const row = this.order();
     return row ? trackerSteps(row.status) : [];
   });
   readonly kindLabel = kindLabel;
-  readonly otpCtrl = new FormControl('', { nonNullable: true });
-  readonly otpSent = signal(false);
-  readonly revealed = signal(false);
-  readonly revealedPassword = signal('');
-  readonly pendingFile = signal<FulfilmentFile | null>(null);
-  readonly pendingFileName = signal('');
 
   ngOnInit(): void {
     this.route.paramMap.subscribe((params) => {
@@ -320,17 +267,10 @@ export class OrderDetailComponent implements OnInit {
         this.load(id);
       }
     });
-    if (this.isAdmin()) {
-      this.onboarding.loadPartners().subscribe();
-    }
   }
 
   partnerLabel(row: PartnerOrder): string {
-    if (row.legalName) {
-      return row.legalName;
-    }
-    const hit = this.onboarding.partners().find((p) => p.user.id === row.userId);
-    return hit?.application?.profile.legalName || hit?.user.fullName || this.auth.user()?.fullName || 'Partner';
+    return row.legalName || this.auth.user()?.fullName || 'Partner';
   }
 
   againLink(row: PartnerOrder): string {
@@ -350,91 +290,6 @@ export class OrderDetailComponent implements OnInit {
     downloadText(`${row.id}-LOCKED.txt`, lockedFileText(row), 'text/plain');
   }
 
-  onFile(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    const file = input.files?.[0];
-    if (!file) {
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = () => {
-      this.pendingFile.set({
-        fileName: file.name,
-        mimeType: file.type || 'application/octet-stream',
-        dataUrl: String(reader.result || ''),
-      });
-      this.pendingFileName.set(file.name);
-    };
-    reader.readAsDataURL(file);
-  }
-
-  uploadFile(): void {
-    const row = this.order();
-    const file = this.pendingFile();
-    if (!row || !file) {
-      return;
-    }
-    this.busy.set(true);
-    this.onboarding.fulfillWithFile(row.id, file).subscribe({
-      next: (next) => {
-        this.order.set(next);
-        this.pendingFile.set(null);
-        this.busy.set(false);
-      },
-      error: (err: Error) => {
-        this.error.set(err.message);
-        this.busy.set(false);
-      },
-    });
-  }
-
-  sendOtp(): void {
-    const row = this.order();
-    if (!row) {
-      return;
-    }
-    this.busy.set(true);
-    this.onboarding.requestFileOtp(row.id).subscribe({
-      next: () => {
-        this.otpSent.set(true);
-        this.busy.set(false);
-      },
-      error: (err: Error) => {
-        this.error.set(err.message);
-        this.busy.set(false);
-      },
-    });
-  }
-
-  reveal(): void {
-    const row = this.order();
-    if (!row) {
-      return;
-    }
-    this.busy.set(true);
-    this.onboarding.revealFilePassword(row.id, this.otpCtrl.value).subscribe({
-      next: (payload) => {
-        this.revealed.set(true);
-        this.revealedPassword.set(payload.password);
-        this.realFile = payload.file;
-        this.busy.set(false);
-      },
-      error: (err: Error) => {
-        this.error.set(err.message);
-        this.busy.set(false);
-      },
-    });
-  }
-
-  downloadReal(): void {
-    if (!this.realFile) {
-      return;
-    }
-    downloadDataUrl(this.realFile.fileName, this.realFile.dataUrl);
-  }
-
-  private realFile: FulfilmentFile | null = null;
-
   cancel(): void {
     const row = this.order();
     if (!row) {
@@ -442,24 +297,6 @@ export class OrderDetailComponent implements OnInit {
     }
     this.busy.set(true);
     this.onboarding.cancelOrder(row.id).subscribe({
-      next: (next) => {
-        this.order.set(next);
-        this.busy.set(false);
-      },
-      error: (err: Error) => {
-        this.error.set(err.message);
-        this.busy.set(false);
-      },
-    });
-  }
-
-  setStatus(status: 'processing' | 'fulfilled' | 'cancelled'): void {
-    const row = this.order();
-    if (!row) {
-      return;
-    }
-    this.busy.set(true);
-    this.onboarding.adminSetOrderStatus(row.id, status).subscribe({
       next: (next) => {
         this.order.set(next);
         this.busy.set(false);

@@ -256,6 +256,10 @@ class VerificationService:
         if result.raw:
             record.set_provider_response(result.raw)
         record.save()
+        if verified:
+            from merchants.scoring import update_merchant_risk_status
+
+            update_merchant_risk_status(merchant)
         AuditService.record(
             actor=actor,
             action=f"verification.{vtype.lower()}",

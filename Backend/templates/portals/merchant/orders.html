@@ -6,7 +6,7 @@
 {% if orders %}
 <div class="card table-wrap">
     <table class="js-datatable display nowrap w-100">
-        <thead><tr><th>Order ID</th><th>Status</th><th class="num">Total</th><th>Created</th></tr></thead>
+        <thead><tr><th scope="col">Order ID</th><th scope="col">Status</th><th class="num">Total</th><th scope="col">Created</th></tr></thead>
         <tbody>
         {% for order in orders %}
         <tr>

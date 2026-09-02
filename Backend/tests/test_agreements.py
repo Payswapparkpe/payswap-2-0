@@ -1,4 +1,5 @@
 import pytest
+from django.contrib.messages import get_messages
 from django.core.exceptions import ValidationError
 
 from agreements.models import Agreement
@@ -92,5 +93,19 @@ class TestAgreementPortal:
         assert "Verification required" in html
         assert "Aadhaar eSign" in html
         assert "KYC is Not started" in html
-        response = client.post("/merchant/agreements/", {"action": "esign"})
+        # Consent is sent so the request reaches the KYC gate this test is about,
+        # rather than being turned away by the consent check first.
+        response = client.post("/merchant/agreements/", {"action": "esign", "consent": "yes"})
         assert response.status_code == 302
+
+    def test_esign_requires_consent(self, client, merchant_user):
+        MerchantOnboardingService.start(merchant_user, entity_type="PRIVATE_LIMITED")
+        client.force_login(merchant_user)
+
+        response = client.post("/merchant/agreements/", {"action": "esign"})
+
+        assert response.status_code == 302
+        assert any(
+            "consent" in str(message).lower()
+            for message in get_messages(response.wsgi_request)
+        )

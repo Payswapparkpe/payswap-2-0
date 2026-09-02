@@ -8,12 +8,18 @@ from django_ratelimit.decorators import ratelimit
 from access.models import UserRole
 from access.policy import Policy
 from merchants.models import OnboardingApplication
+from merchants.review import (
+    CLARIFICATION_SECTIONS,
+    documents_for_review,
+    staff_review_context,
+)
 from merchants.services import MerchantOnboardingService
 from merchants.states import ApplicationStatus
 from orders.models import OrderStatus, PaymentOrder
 from orders.services import PaymentOrderService
 from portals.mixins import ActionRequiredMixin, EmployeeRequiredMixin
 from portals.pagination import paginate
+from verification.models import VerificationRecord
 
 
 class EmployeeDashboardView(EmployeeRequiredMixin, View):
@@ -84,10 +90,26 @@ class EmployeeApplicationView(EmployeeRequiredMixin, ActionRequiredMixin, View):
     def get(self, request, public_id):
         application = get_object_or_404(OnboardingApplication, public_id=public_id)
         Policy.require(request.user, "merchant.review", application.merchant)
+        documents = list(application.merchant.documents.all())
+        verifications = list(VerificationRecord.objects.filter(merchant=application.merchant).order_by("-requested_at")[:50])
+        review_context = staff_review_context(
+            request=request,
+            merchant=application.merchant,
+            application=application,
+            verifications=verifications,
+        )
         return render(
             request,
             "portals/employee/application.html",
-            {"application": application, "merchant": application.merchant},
+            {
+                "application": application,
+                "merchant": application.merchant,
+                "clarification_sections": CLARIFICATION_SECTIONS,
+                "documents": documents,
+                "document_cards": documents_for_review(documents),
+                "verifications": verifications,
+                **review_context,
+            },
         )
 
     def post(self, request, public_id):

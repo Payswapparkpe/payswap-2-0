@@ -16,7 +16,11 @@ from agreements.services import AgreementService
 from audit.models import AuditEvent
 from audit.services import AuditService
 from merchants.models import Merchant, OnboardingApplication
-from merchants.review import CLARIFICATION_SECTIONS, application_review_context
+from merchants.review import (
+    CLARIFICATION_SECTIONS,
+    documents_for_review,
+    staff_review_context,
+)
 from merchants.services import MerchantOnboardingService
 from merchants.states import ApplicationStatus
 from orders.models import OrderStatus, PaymentOrder
@@ -174,11 +178,13 @@ class AdminVerificationDashboardView(AdministrationRequiredMixin, View):
             },
         ]
         page, querystring = paginate(request, records)
+        record_cards = verification_records_for_review(page.object_list)
         return render(
             request,
             "portals/administration/verification.html",
             {
                 "records": page.object_list,
+                "record_cards": record_cards,
                 "cards": attach_pct(cards, key="value"),
                 "page": page,
                 "querystring": querystring,
@@ -231,8 +237,31 @@ class MerchantListView(AdministrationRequiredMixin, View):
         return render(
             request,
             "portals/administration/merchants.html",
-            {"merchants": page.object_list, "filters": request.GET, "page": page, "querystring": querystring},
+            {
+                "merchants": page.object_list,
+                "filters": request.GET,
+                "page": page,
+                "querystring": querystring,
+                "entity_choices": Merchant.EntityType.choices,
+                "summary": {
+                    "total": Merchant.objects.count(),
+                    "active": Merchant.objects.filter(status=Merchant.Status.ACTIVE).count(),
+                    "pending": Merchant.objects.filter(status=Merchant.Status.PENDING_REVIEW).count(),
+                    "suspended": Merchant.objects.filter(status=Merchant.Status.SUSPENDED).count(),
+                },
+            },
         )
+
+
+#: Tab slug → label for the merchant detail page, in display order.
+MERCHANT_DETAIL_TABS = {
+    "overview": "Overview",
+    "documents": "Documents",
+    "verification": "Verification",
+    "orders": "Orders",
+    "agreements": "Agreement",
+    "audit": "Audit",
+}
 
 
 @method_decorator(ratelimit(key="user_or_ip", rate="20/m", method="POST", block=True), name="dispatch")
@@ -241,7 +270,26 @@ class MerchantDetailView(AdministrationRequiredMixin, View):
         merchant = get_object_or_404(Merchant.objects.select_related("owner"), public_id=public_id)
         Policy.require(request.user, "merchant.view", merchant)
         application = merchant.applications.order_by("-created_at").first()
+        # Normalized here so the template can compare against one canonical value
+        # instead of maintaining a negative list of every other tab.
         tab = request.GET.get("tab", "overview")
+        if tab not in MERCHANT_DETAIL_TABS:
+            tab = "overview"
+        documents = list(merchant.documents.select_related("reviewed_by", "uploaded_by").all())
+        verifications = list(VerificationRecord.objects.filter(merchant=merchant).order_by("-requested_at")[:50])
+        tab_counts = {
+            "documents": len(documents),
+            "verification": len(verifications),
+            "orders": merchant.orders.count(),
+            "agreements": merchant.agreements.count(),
+            "audit": AuditEvent.objects.filter(resource_id=merchant.public_id).count(),
+        }
+        review_context = staff_review_context(
+            request=request,
+            merchant=merchant,
+            application=application,
+            verifications=verifications,
+        )
         return render(
             request,
             "portals/administration/merchant_detail.html",
@@ -249,14 +297,17 @@ class MerchantDetailView(AdministrationRequiredMixin, View):
                 "merchant": merchant,
                 "application": application,
                 "tab": tab,
-                "review": application_review_context(application),
+                "tabs": MERCHANT_DETAIL_TABS,
+                "tab_counts": tab_counts,
                 "clarification_sections": CLARIFICATION_SECTIONS,
-                "documents": merchant.documents.select_related("reviewed_by", "uploaded_by").all(),
-                "verifications": VerificationRecord.objects.filter(merchant=merchant)[:50],
+                "documents": documents,
+                "document_cards": documents_for_review(documents),
+                "verifications": verifications,
                 "orders": merchant.orders.all()[:20],
                 "agreements": merchant.agreements.all(),
                 "audit_events": AuditEvent.objects.filter(resource_id=merchant.public_id)[:30],
                 "employees": User.objects.filter(user_type=User.UserType.EMPLOYEE),
+                **review_context,
             },
         )
 

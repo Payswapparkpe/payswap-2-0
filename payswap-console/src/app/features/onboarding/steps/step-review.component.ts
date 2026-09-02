@@ -107,7 +107,7 @@ import { prevOnboardingStep, resolvedSignatoryIsOwner, rulesFor } from '../../..
     @if (application.status === 'pending_admin_sign') {
       <div class="ticket">
         <h4>Waiting for admin countersign</h4>
-        <p>You have signed. Ask Payswap admin (admin&#64;payswap.in) to countersign in Admin → Partners.</p>
+        <p>You have signed. The Payswap team countersigns from the staff portal; we will email you once it is executed.</p>
       </div>
     }
     @if (application.status === 'activated') {

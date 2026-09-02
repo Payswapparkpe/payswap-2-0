@@ -2,7 +2,26 @@
 {% block heading %}Merchants{% endblock %}
 {% block subhead %}Review, assign, and oversee merchant accounts{% endblock %}
 {% block content %}
-<form method="get" class="card toolbar">
+<section class="grid kpis merchant-kpis" aria-label="Merchant overview">
+    <div class="card kpi">
+        <div class="kpi-label">Total merchants</div>
+        <div class="value">{{ summary.total }}</div>
+    </div>
+    <div class="card kpi">
+        <div class="kpi-label">Active</div>
+        <div class="value">{{ summary.active }}</div>
+    </div>
+    <div class="card kpi">
+        <div class="kpi-label">Pending review</div>
+        <div class="value">{{ summary.pending }}</div>
+    </div>
+    <div class="card kpi">
+        <div class="kpi-label">Suspended</div>
+        <div class="value">{{ summary.suspended }}</div>
+    </div>
+</section>
+
+<form method="get" class="card toolbar mt-3">
     <label class="field grow">
         <span class="field-title">Search</span>
         <input name="q" value="{{ filters.q }}" placeholder="Merchant ID, name, or email">
@@ -14,32 +33,51 @@
             <option value="ACTIVE" {% if filters.status == "ACTIVE" %}selected{% endif %}>Active</option>
             <option value="PENDING_REVIEW" {% if filters.status == "PENDING_REVIEW" %}selected{% endif %}>Pending review</option>
             <option value="SUSPENDED" {% if filters.status == "SUSPENDED" %}selected{% endif %}>Suspended</option>
+            <option value="DRAFT" {% if filters.status == "DRAFT" %}selected{% endif %}>Draft</option>
+        </select>
+    </label>
+    <label class="field">
+        <span class="field-title">Entity</span>
+        <select name="entity_type">
+            <option value="">All entities</option>
+            {% for value, label in entity_choices %}
+            <option value="{{ value }}" {% if filters.entity_type == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
         </select>
     </label>
     <button type="submit">Apply filters</button>
 </form>
+
 {% if merchants %}
-<div class="card table-wrap">
+<div class="card table-wrap mt-3 merchant-table">
     <table>
         <thead>
             <tr>
-                <th>Merchant ID</th><th>Business name</th><th>Entity</th><th>Status</th>
-                <th>KYC</th><th>KYB</th><th>Bank</th><th>Agreement</th><th>Risk</th><th>Assigned</th>
+                <th scope="col">Merchant ID</th>
+                <th scope="col">Business name</th>
+                <th scope="col">Entity</th>
+                <th scope="col">Status</th>
+                <th scope="col">KYC</th>
+                <th scope="col">KYB</th>
+                <th scope="col">Bank</th>
+                <th scope="col">Agreement</th>
+                <th scope="col">Risk</th>
+                <th scope="col">Assigned</th>
             </tr>
         </thead>
         <tbody>
             {% for merchant in merchants %}
             <tr>
-                <td><a href="/administration/merchants/{{ merchant.public_id }}/">{{ merchant.public_id }}</a></td>
-                <td>{{ merchant.business_name }}</td>
+                <td><a class="merchant-link" href="/administration/merchants/{{ merchant.public_id }}/"><code>{{ merchant.public_id }}</code></a></td>
+                <td><strong>{{ merchant.business_name|default:"—" }}</strong><br><span class="muted">{{ merchant.owner.email }}</span></td>
                 <td>{{ merchant.get_entity_type_display }}</td>
                 <td><span class="badge {% if merchant.status == 'ACTIVE' %}ok{% elif merchant.status == 'SUSPENDED' %}danger{% else %}neutral{% endif %}">{{ merchant.get_status_display }}</span></td>
-                <td>{{ merchant.get_kyc_status_display }}</td>
-                <td>{{ merchant.get_kyb_status_display }}</td>
-                <td>{{ merchant.get_bank_status_display }}</td>
-                <td>{{ merchant.get_agreement_status_display }}</td>
-                <td>{{ merchant.get_risk_status_display }}</td>
-                <td>{{ merchant.assigned_to|default:"—" }}</td>
+                <td><span class="status-chip">{{ merchant.get_kyc_status_display }}</span></td>
+                <td><span class="status-chip">{{ merchant.get_kyb_status_display }}</span></td>
+                <td><span class="status-chip">{{ merchant.get_bank_status_display }}</span></td>
+                <td><span class="status-chip">{{ merchant.get_agreement_status_display }}</span></td>
+                <td><span class="status-chip">{{ merchant.get_risk_status_display }}</span></td>
+                <td class="muted">{{ merchant.assigned_to|default:"—" }}</td>
             </tr>
             {% endfor %}
         </tbody>

@@ -1,6 +1,6 @@
 {% extends "layouts/administration.html" %}
 {% block heading %}Verification dashboard{% endblock %}
-{% block subhead %}Cashfree verification records across merchants.{% endblock %}
+{% block subhead %}Cashfree verification outcomes across merchants — readable summaries, not raw API dumps.{% endblock %}
 {% block content %}
 <section class="grid kpis" aria-label="Verification overview">
     {% for card in cards %}
@@ -36,45 +36,12 @@
     <button type="submit">Filter</button>
 </form>
 
-<div class="card table-wrap mt-3">
-    <table>
-        <thead>
-            <tr>
-                <th>Merchant</th><th>Type</th><th>Identifier</th><th>Status</th>
-                <th>Requested</th><th>Verified</th><th>Expires</th><th>Reference</th><th></th>
-            </tr>
-        </thead>
-        <tbody>
-        {% for record in records %}
-            <tr>
-                <td><a href="{% url 'administration:merchant_detail' record.merchant.public_id %}">{{ record.merchant.business_name }}</a></td>
-                <td>{{ record.get_verification_type_display }}</td>
-                <td>{{ record.document_masked|default:"—" }}{% if record.reused_from_id %} <span class="badge neutral">reused</span>{% endif %}</td>
-                <td>
-                    {% if record.status == "VERIFIED" %}<span class="badge ok">Verified</span>
-                    {% elif record.status == "FAILED" or record.status == "REJECTED" %}<span class="badge danger">{{ record.get_status_display }}</span>
-                    {% elif record.status == "PENDING" or record.status == "PROCESSING" %}<span class="badge neutral">{{ record.get_status_display }}</span>
-                    {% else %}<span class="badge warn">{{ record.get_status_display }}</span>{% endif %}
-                </td>
-                <td>{{ record.requested_at|date:"d M Y" }}</td>
-                <td>{{ record.completed_at|date:"d M Y"|default:"—" }}</td>
-                <td>{{ record.expires_at|date:"d M Y"|default:"—" }}</td>
-                <td class="muted">{{ record.reference_id|default:"—" }}</td>
-                <td>
-                    {% if record.status == "VERIFIED" %}
-                    <form method="post">
-                        {% csrf_token %}
-                        <input type="hidden" name="record" value="{{ record.public_id }}">
-                        <button type="submit" name="action" value="expire" class="btn ghost">Expire</button>
-                    </form>
-                    {% endif %}
-                </td>
-            </tr>
-        {% empty %}
-            <tr><td colspan="9" class="muted">No verification records match the filters.</td></tr>
-        {% endfor %}
-        </tbody>
-    </table>
-    {% include "partials/pager.html" %}
+{% if record_cards %}
+<div class="mt-3">
+    {% include "portals/includes/review_verifications.html" with verification_cards=record_cards show_merchant_link=True show_expire_actions=True %}
 </div>
+{% include "partials/pager.html" %}
+{% else %}
+<div class="card mt-3"><p class="muted">No verification records match the filters.</p></div>
+{% endif %}
 {% endblock %}

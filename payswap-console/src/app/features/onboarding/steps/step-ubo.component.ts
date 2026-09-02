@@ -323,7 +323,7 @@ export class StepUboComponent implements OnInit {
       pan: d.pan || '',
       ownershipPercent: 0,
       relationship: d.designation || 'Director',
-      kycVerified: false,
+      kycVerified: Boolean(d.kycVerified),
       mobile: '',
       digiConsent: false,
     }));

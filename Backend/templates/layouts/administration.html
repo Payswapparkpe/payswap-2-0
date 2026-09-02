@@ -32,7 +32,6 @@
         <div class="topbar">
             <button class="nav-toggle" type="button" data-nav-toggle aria-controls="portal-nav" aria-expanded="false">Menu</button>
             <div class="title-block">
-                {% block breadcrumbs %}{% endblock %}
                 <h1>{% block heading %}Dashboard{% endblock %}</h1>
                 <p class="page-lead">{% block subhead %}{% endblock %}</p>
             </div>
@@ -43,10 +42,17 @@
                 <input id="global-q" name="q" placeholder="Search merchants" autocomplete="off">
                 <button type="submit" class="btn ghost" aria-label="Search">Go</button>
             </form>
-            <a class="notify-pill" href="{{ notifications_url }}"><span>Alerts</span><strong data-unread>{{ unread_notification_count }}</strong></a>
+            <a class="notify-pill" href="{{ notifications_url }}" aria-label="Alerts: {{ unread_notification_count }} unread"><span>Alerts</span><strong data-unread aria-hidden="true">{{ unread_notification_count }}</strong></a>
             {% include "partials/portal_user_menu.html" %}
         </div>
         <div id="content">
+            {% comment %}
+            Breadcrumbs live here, not in .title-block: the topbar is a compact
+            sticky bar, so a second line of text there pushed the page heading
+            around. They used to be hidden with display:none, which meant four
+            templates shipped breadcrumb markup no one could ever see.
+            {% endcomment %}
+            {% block breadcrumbs %}{% endblock %}
             {% block content %}{% endblock %}
         </div>
         {% include "partials/site_footer.html" %}

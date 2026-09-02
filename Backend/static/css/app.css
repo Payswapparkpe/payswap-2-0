@@ -635,10 +635,6 @@ h3 {
     min-width: 0;
 }
 
-.title-block .breadcrumbs {
-    display: none;
-}
-
 .title-block .page-lead {
     margin: 4px 0 0;
     font-size: var(--type-support);
@@ -730,10 +726,15 @@ h3 {
 
 .top-search input:hover,
 .top-search input:focus-visible {
-    outline: none;
     box-shadow: none;
     border-color: transparent;
     background: transparent;
+}
+
+/* The pill draws the ring via :focus-within, but the input still needs its own
+   visible focus indicator — outline:none here left keyboard users with none. */
+.top-search input:hover {
+    outline: none;
 }
 
 .notify-pill {
@@ -1156,6 +1157,9 @@ h3 {
     overflow: auto;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
+    /* Without this a scroll container is still a grid/flex item with
+       min-width:auto, so a wide table stretches its parent instead of scrolling. */
+    min-width: 0;
 }
 
 div.dt-container {
@@ -1628,6 +1632,12 @@ input[type="radio"]:hover {
     margin-bottom: 0;
 }
 
+/* A stretched, full-width destructive button reads as the primary action and is
+   easy to hit by accident, so it sizes to its label. */
+.reject-form > button {
+    justify-self: start;
+}
+
 input[type="file"] {
     padding: 8px 10px;
     border-radius: var(--radius-md);
@@ -1681,6 +1691,268 @@ input[type="file"]:hover {
     gap: 6px;
 }
 
+/* Reviewer view of a submitted onboarding application (admin + employee). */
+
+/* Reviewer evidence sheet — an audit ledger the reviewer scans for gaps, so it
+   favours ruled density over cards-in-cards, and puts the "what is missing"
+   answer in the section header instead of colouring every blank row. */
+.review-data {
+    display: grid;
+    gap: var(--space-6);
+    margin: var(--space-5) 0;
+}
+
+.review-data > * {
+    min-width: 0;
+}
+
+.review-section-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-3);
+    padding-bottom: var(--space-2);
+    border-bottom: 2px solid var(--brand-soft);
+    margin-bottom: var(--space-2);
+}
+
+.review-section-head h3 {
+    margin: 0;
+    font-size: var(--type-support);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--brand-strong);
+}
+
+/* Neutral by default so a plain tally ("3 on file") stays informational; only a
+   partially filled section earns the warn treatment. */
+.review-count {
+    flex: 0 0 auto;
+    font-size: 0.75rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.02em;
+    color: var(--neutral);
+    background: var(--neutral-soft);
+    border-radius: var(--radius-pill);
+    padding: 2px 10px;
+}
+
+.review-count.is-full {
+    color: var(--ok);
+    background: var(--ok-soft);
+}
+
+.review-count.is-partial {
+    color: var(--warn);
+    background: var(--warn-soft);
+}
+
+.review-grid {
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
+    gap: 0 var(--space-6);
+}
+
+.review-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: var(--space-3);
+    padding: 9px 0;
+    border-bottom: 1px solid var(--line);
+    font-size: var(--type-support);
+    line-height: 1.4;
+}
+
+.review-row dt {
+    flex: 0 1 auto;
+    color: var(--muted);
+}
+
+.review-row dd {
+    margin: 0;
+    flex: 1 1 auto;
+    font-weight: 500;
+    text-align: right;
+    overflow-wrap: anywhere;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Most blanks are optional fields; the section counter carries the alarm, so a
+   missing value only recedes rather than lighting up warn on every row. */
+.review-row.is-missing dd {
+    color: var(--outline);
+    font-weight: 400;
+}
+
+.review-hint {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 400;
+    color: var(--muted);
+}
+
+/* Branching yes/no answers that decide which people must be on file. */
+.review-answers {
+    list-style: none;
+    margin: 0 0 var(--space-4);
+    padding: var(--space-3) var(--space-4);
+    display: grid;
+    gap: var(--space-2);
+    background: var(--brand-soft);
+    border-radius: var(--radius-sm);
+    font-size: var(--type-support);
+}
+
+.review-answers li {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: var(--space-3);
+}
+
+.review-answers span {
+    color: var(--muted);
+}
+
+.review-answers strong {
+    color: var(--brand-strong);
+}
+
+.person-card {
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--brand-cyan);
+    border-radius: var(--radius-sm);
+    padding: var(--space-3) var(--space-4);
+    margin-bottom: var(--space-3);
+    background: var(--surface);
+}
+
+.person-card-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: var(--space-3);
+    margin-bottom: var(--space-1);
+}
+
+.person-role {
+    margin: 0;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+}
+
+.person-card-head h4 {
+    margin: 2px 0 0;
+    font-size: 1rem;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+    color: var(--brand-strong);
+}
+
+/* Document review rows on the administration merchant detail page. */
+.doc-row {
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    padding: var(--space-4);
+    margin-bottom: var(--space-3);
+    background: var(--surface);
+}
+
+.doc-row-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+}
+
+.doc-row-title h3 {
+    margin: 0;
+    font-size: 1rem;
+}
+
+.doc-row-title .muted {
+    margin: 2px 0 0;
+    font-size: var(--type-support);
+}
+
+.doc-row-note {
+    margin: var(--space-3) 0 0;
+    padding: var(--space-2) var(--space-3);
+    border-left: 3px solid var(--danger);
+    background: var(--danger-soft);
+    color: var(--on-danger);
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    font-size: var(--type-support);
+}
+
+/* Approve / reject / send-back sit together so the reviewer sees the full set of
+   outcomes before committing to one. */
+.decision-panel {
+    margin-top: var(--space-6);
+    padding-top: var(--space-5);
+    border-top: 2px solid var(--brand-soft);
+}
+
+.decision-split {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
+    gap: var(--space-4);
+    margin-top: var(--space-3);
+}
+
+.decision-branch {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: var(--space-4);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+}
+
+.decision-branch h4 {
+    margin: 0;
+    font-size: var(--type-label);
+    font-weight: 650;
+    letter-spacing: 0.01em;
+    color: var(--brand-strong);
+}
+
+.decision-branch .muted {
+    margin: 0;
+    font-size: var(--type-support);
+}
+
+.decision-branch .field {
+    margin-bottom: 0;
+}
+
+.decision-branch button {
+    margin-top: auto;
+    align-self: flex-start;
+}
+
+.danger-zone {
+    margin-top: var(--space-5);
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid color-mix(in srgb, var(--danger) 28%, var(--line));
+    border-radius: var(--radius-sm);
+    background: color-mix(in srgb, var(--danger-soft) 40%, var(--surface));
+}
+
+.danger-zone .muted {
+    margin: 0;
+    font-size: var(--type-support);
+}
+
 .kv {
     margin: var(--space-3) 0 0;
     display: grid;
@@ -1732,11 +2004,6 @@ input[type="file"]:hover {
     font-weight: 400;
     color: var(--muted);
     margin: 8px 0 0;
-}
-
-.plain-list {
-    margin: 8px 0 0;
-    padding-left: 18px;
 }
 
 .recovery-code {
@@ -3301,24 +3568,27 @@ body:has(.cookie-banner) {
     background: var(--ok, #1a7f4c);
 }
 
-/* Status panel (merchant detail aside) */
-.status-panel {
+/* Replaced .status-panel, whose `> div` rule (specificity 0,1,1) beat
+   .status-meters (0,1,0) and forced the meter list into a flex row that
+   overflowed this 220px column. */
+.merchant-aside {
     display: grid;
     gap: 10px;
     align-content: start;
 }
 
-.status-panel > div {
-    display: flex;
-    justify-content: space-between;
-    gap: 10px;
-    align-items: center;
-    padding-bottom: 10px;
+.merchant-aside-head {
+    display: grid;
+    gap: var(--space-2);
+    justify-items: start;
+    padding-bottom: var(--space-3);
     border-bottom: 1px solid var(--line);
 }
 
-.status-panel > div:last-child {
-    border-bottom: 0;
+.merchant-aside-head .muted {
+    margin: 0;
+    font-size: var(--type-support);
+    overflow-wrap: anywhere;
 }
 
 /* Tabs (merchant detail) */
@@ -3357,6 +3627,310 @@ body:has(.cookie-banner) {
     background: var(--brand-soft);
 }
 
+.tab-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.25rem;
+    margin-left: 6px;
+    padding: 0 6px;
+    border-radius: var(--radius-pill);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--brand);
+    background: var(--surface);
+    border: 1px solid var(--line);
+}
+
+.tab-intro {
+    margin-bottom: var(--space-4);
+}
+
+.tab-intro h2 {
+    margin: 0 0 4px;
+    font-size: 1.125rem;
+    font-weight: 650;
+    color: var(--brand-strong);
+}
+
+.tab-intro .muted {
+    margin: 0;
+}
+
+.merchant-aside-head {
+    display: grid;
+    gap: 6px;
+    margin-bottom: var(--space-3);
+}
+
+.status-meters {
+    display: grid;
+    gap: 0;
+}
+
+.status-meter {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--line);
+    font-size: var(--type-support);
+}
+
+.status-meter:last-child {
+    border-bottom: 0;
+}
+
+.status-meter span {
+    color: var(--muted);
+}
+
+.status-meter strong {
+    font-weight: 600;
+    color: var(--brand-strong);
+}
+
+.merchant-quick-links {
+    display: grid;
+    gap: 8px;
+    margin-top: var(--space-4);
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--line);
+}
+
+.quick-link {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 10px;
+    border-radius: var(--radius-sm);
+    background: var(--brand-soft);
+    color: var(--brand-strong);
+    text-decoration: none;
+    font-size: var(--type-support);
+    font-weight: 500;
+}
+
+.quick-link:hover {
+    background: var(--line);
+}
+
+.merchant-kpis {
+    grid-template-columns: repeat(auto-fit, minmax(min(160px, 100%), 1fr));
+}
+
+.merchant-table tbody tr:hover {
+    background: var(--brand-soft);
+}
+
+.merchant-link code {
+    font-weight: 600;
+}
+
+.status-chip {
+    display: inline-block;
+    font-size: 0.75rem;
+    color: var(--muted);
+}
+
+.doc-grid {
+    display: grid;
+    gap: var(--space-3);
+}
+
+.doc-card {
+    display: grid;
+    grid-template-columns: 120px minmax(0, 1fr);
+    gap: var(--space-4);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    padding: var(--space-4);
+    background: var(--surface);
+}
+
+.doc-card-media {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+}
+
+.doc-thumb {
+    width: 104px;
+    height: 132px;
+    object-fit: cover;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--line);
+    background: var(--brand-soft);
+}
+
+.doc-thumb--pdf,
+.doc-thumb--file {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.875rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: var(--brand);
+}
+
+.doc-meta {
+    margin-top: 4px;
+}
+
+.verification-stack {
+    display: grid;
+    gap: var(--space-3);
+}
+
+.verification-card {
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    padding: var(--space-4);
+    background: var(--surface);
+}
+
+.verification-card-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+    margin-bottom: var(--space-2);
+}
+
+.verification-card-head h3 {
+    margin: 0;
+    font-size: 1rem;
+}
+
+.verification-meta {
+    margin-bottom: var(--space-2);
+}
+
+.verification-expire-form {
+    margin-top: var(--space-2);
+}
+
+.verification-card--furnished {
+    display: grid;
+    gap: var(--space-3);
+}
+
+.verification-card-title h3 {
+    margin: 0;
+}
+
+.verification-merchant {
+    margin: 0 0 4px;
+    font-size: var(--type-support);
+    font-weight: 600;
+}
+
+.verification-merchant a {
+    color: var(--brand-strong);
+    text-decoration: none;
+}
+
+.verification-merchant a:hover {
+    text-decoration: underline;
+}
+
+.verification-ref {
+    margin: 4px 0 0;
+    font-size: 0.75rem;
+}
+
+.verification-highlights {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.furnish-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: var(--radius-pill);
+    background: var(--brand-soft);
+    color: var(--brand-strong);
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.verification-match {
+    padding: var(--space-3);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    border: 1px solid var(--line);
+}
+
+.verification-match-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: var(--space-3);
+    margin-bottom: 8px;
+    font-size: var(--type-support);
+}
+
+.verification-match-head span {
+    color: var(--muted);
+}
+
+.verification-section {
+    padding-top: var(--space-2);
+    border-top: 1px dashed var(--line);
+}
+
+.verification-section h4 {
+    margin: 0 0 var(--space-2);
+    font-size: 0.8125rem;
+    font-weight: 650;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+}
+
+.verification-detail-grid .review-row {
+    padding: 7px 0;
+}
+
+.api-payload {
+    margin-top: var(--space-2);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    background: var(--brand-soft);
+}
+
+.api-payload > summary {
+    cursor: pointer;
+    padding: 10px 12px;
+    font-weight: 600;
+    font-size: var(--type-support);
+    color: var(--brand-strong);
+    list-style-position: outside;
+}
+
+.api-payload-body {
+    margin: 0;
+    padding: 12px;
+    max-height: 420px;
+    overflow: auto;
+    font-size: 0.75rem;
+    line-height: 1.45;
+    border-top: 1px solid var(--line);
+    background: var(--surface);
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.api-payload-section {
+    margin-top: var(--space-5);
+}
+
 /* 6. Utilities ------------------------------------------------------------ */
 
 .mt-1 { margin-top: var(--space-1); }
@@ -3384,8 +3958,10 @@ body:has(.cookie-banner) {
 .text-center { text-align: center; }
 .nowrap { white-space: nowrap; }
 
-.grid-side { grid-template-columns: 220px 1fr; }
-.grid-auto { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+/* minmax(0, …) keeps the flexible track from flooring at min-content, which is
+   what lets wide tables and nowrap rows push a card past the viewport. */
+.grid-side { grid-template-columns: 220px minmax(0, 1fr); }
+.grid-auto { grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr)); }
 
 /* Stack: vertical rhythm without inline margins */
 .stack > * + * {
@@ -3466,7 +4042,10 @@ body:has(.cookie-banner) {
     .app.nav-collapsed,
     .app.merchant,
     .app.employee {
-        grid-template-columns: 1fr;
+        /* minmax(0, …) not 1fr: a bare 1fr floors the track at min-content, so the
+           main column grew past the viewport and .app's overflow:hidden silently
+           clipped the right-hand side of every page. */
+        grid-template-columns: minmax(0, 1fr);
     }
 
     .nav {
@@ -3556,7 +4135,15 @@ body:has(.cookie-banner) {
 
     .grid-side,
     .grid-auto {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .doc-card {
         grid-template-columns: 1fr;
+    }
+
+    .doc-card-media {
+        justify-content: flex-start;
     }
 
     .table-wrap {
@@ -3945,6 +4532,129 @@ body:has(.cookie-banner) {
         flex: 1 1 calc(50% - 8px);
         min-width: 140px;
     }
+}
+
+/* Verification review command center -------------------------------------- */
+
+.review-scores {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
+    gap: var(--space-3);
+    margin-bottom: var(--space-4);
+}
+
+.score-card {
+    padding: var(--space-4);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    background: var(--brand-soft);
+}
+
+.score-card-label {
+    margin: 0;
+    font-size: var(--type-support);
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.score-card-value {
+    margin: 6px 0 8px;
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--brand-strong);
+    font-variant-numeric: tabular-nums;
+}
+
+.score-card-suffix {
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--muted);
+}
+
+.score-card-meta,
+.score-card-alert {
+    margin: 8px 0 0;
+    font-size: var(--type-support);
+}
+
+.score-card-alert {
+    color: var(--danger);
+    font-weight: 600;
+}
+
+.review-match-panel {
+    margin-bottom: var(--space-4);
+}
+
+.match-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--type-support);
+}
+
+.match-table th,
+.match-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--line);
+    text-align: left;
+    vertical-align: top;
+}
+
+.match-table thead th {
+    font-size: var(--type-label);
+    color: var(--muted);
+    background: var(--neutral-soft);
+}
+
+.match-row--mismatch {
+    background: var(--danger-soft);
+}
+
+.match-row--partial {
+    background: var(--warn-soft);
+}
+
+.match-row--match td:last-child .badge {
+    background: var(--ok-soft);
+    color: var(--on-ok);
+}
+
+.provider-json-panel {
+    margin-top: var(--space-3);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    background: var(--neutral-soft);
+}
+
+.provider-json-panel summary {
+    cursor: pointer;
+    padding: 10px 12px;
+    font-weight: 600;
+    color: var(--brand-strong);
+}
+
+.provider-json {
+    margin: 0;
+    padding: 12px;
+    max-height: 320px;
+    overflow: auto;
+    font-size: 12px;
+    line-height: 1.45;
+    background: #0f1728;
+    color: #e8f1f8;
+    border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+}
+
+.quick-link--alert {
+    background: var(--danger-soft);
+    color: var(--on-danger);
+}
+
+.tab-count.is-alert {
+    background: var(--danger);
+    color: #fff;
 }
 
 /* 8. Motion --------------------------------------------------------------- */

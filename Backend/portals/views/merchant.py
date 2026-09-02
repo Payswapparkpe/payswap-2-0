@@ -527,6 +527,11 @@ class MerchantAgreementView(MerchantRequiredMixin, View):
         if request.POST.get("action") != "esign":
             messages.error(request, "Agreements must be signed with Aadhaar eSign after KYC verification.")
             return redirect("merchant:agreements")
+        # The checkbox is `required`, but that is only enforced in the browser, so
+        # eSign consent has to be re-checked here the same way start_aadhaar does.
+        if request.POST.get("consent") != "yes":
+            messages.error(request, "Confirm you consent to electronic signing before continuing.")
+            return redirect("merchant:agreements")
         agreement = merchant.agreements.order_by("-created_at").first()
         if agreement is None:
             messages.error(request, "No agreement is ready to sign yet.")

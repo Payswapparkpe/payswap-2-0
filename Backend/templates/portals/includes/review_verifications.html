@@ -1,0 +1,85 @@
+{% comment %}
+Furnished Cashfree / DigiLocker verification summaries for staff review.
+Expects verification_cards from verification_records_for_review().
+{% endcomment %}
+{% if verification_cards %}
+<div class="verification-stack">
+    {% for card in verification_cards %}
+    {% with record=card.record furnished=card.furnished %}
+    <article class="verification-card verification-card--furnished">
+        <header class="verification-card-head">
+            <div class="verification-card-title">
+                {% if show_merchant_link %}
+                <p class="verification-merchant">
+                    <a href="{% url 'administration:merchant_detail' record.merchant.public_id %}?tab=verification">{{ record.merchant.business_name }}</a>
+                </p>
+                {% endif %}
+                <h3>{{ record.get_verification_type_display }}</h3>
+                <p class="muted verification-ref">
+                    {{ record.public_id }}
+                    {% if record.reused_from_id %}<span class="badge neutral">Reused</span>{% endif %}
+                </p>
+            </div>
+            <span class="badge {% if record.status == 'VERIFIED' %}ok{% elif record.status == 'FAILED' or record.status == 'REJECTED' %}danger{% elif record.status == 'PENDING' or record.status == 'PROCESSING' %}neutral{% else %}warn{% endif %}">{{ record.get_status_display }}</span>
+        </header>
+
+        {% if furnished.highlights %}
+        <div class="verification-highlights" aria-label="Key outcomes">
+            {% for item in furnished.highlights %}
+            <span class="furnish-chip">{{ item }}</span>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if furnished.match_percent is not None %}
+        <div class="verification-match">
+            <div class="verification-match-head">
+                <span>Name match</span>
+                <strong>{{ furnished.match_category|default:"Score" }} · {{ furnished.match_percent }}%</strong>
+            </div>
+            <div class="match-bar" aria-hidden="true"><span style="--w: {{ furnished.match_percent }}%"></span></div>
+        </div>
+        {% endif %}
+
+        {% if furnished.failure %}
+        <p class="doc-row-note">{{ furnished.failure }}</p>
+        {% endif %}
+
+        {% for section in furnished.sections %}
+        <section class="verification-section">
+            <h4>{{ section.title }}</h4>
+            <dl class="review-grid verification-detail-grid">
+                {% for row in section.rows %}
+                <div class="review-row">
+                    <dt>{{ row.label }}</dt>
+                    <dd>
+                        {{ row.value }}
+                        {% if row.hint %}<span class="review-hint">{{ row.hint }}</span>{% endif %}
+                    </dd>
+                </div>
+                {% endfor %}
+            </dl>
+        </section>
+        {% endfor %}
+
+        {% if furnished.has_provider_json %}
+        <details class="provider-json-panel">
+            <summary>Full provider API response</summary>
+            <pre class="provider-json">{{ furnished.provider_json }}</pre>
+        </details>
+        {% endif %}
+
+        {% if show_expire_actions and record.status == "VERIFIED" %}
+        <form method="post" class="verification-expire-form">
+            {% csrf_token %}
+            <input type="hidden" name="record" value="{{ record.public_id }}">
+            <button type="submit" name="action" value="expire" class="secondary">Expire cached check</button>
+        </form>
+        {% endif %}
+    </article>
+    {% endwith %}
+    {% endfor %}
+</div>
+{% else %}
+<p class="muted">No verification attempts recorded.</p>
+{% endif %}

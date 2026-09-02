@@ -118,10 +118,6 @@ export const routes: Routes = [
       },
     ],
   },
-  { path: 'admin', redirectTo: 'staff-portal', pathMatch: 'full' },
-  { path: 'admin/**', redirectTo: 'staff-portal' },
-  { path: 'desk', redirectTo: 'staff-portal', pathMatch: 'full' },
-  { path: 'desk/**', redirectTo: 'staff-portal' },
   { path: '', pathMatch: 'full', redirectTo: 'login' },
   { path: '**', redirectTo: 'login' },
 ];
